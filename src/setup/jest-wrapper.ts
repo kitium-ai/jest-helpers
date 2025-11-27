@@ -28,6 +28,7 @@ import type { getRequestRecorder } from '../http/contract-testing';
 import { type ContractSpec } from '../http/contract-testing';
 import type * as MatchersModule from '../matchers';
 import type * as MocksModule from '../mocks';
+import type * as MocksModule from '../mocks';
 import type * as TimersModule from '../timers';
 import { delay, getTimerManager, runWithFakeTimers } from '../timers';
 import { type StrictModeOptions, StrictModePresets } from './strict-mode';
@@ -67,6 +68,7 @@ export type JestWrapper = {
    * Convenience wrapper around timer policies per test
    */
   withTimers: <T>(
+    testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
     testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
     mode?: 'fake' | 'real'
   ) => Promise<T>;
@@ -186,14 +188,17 @@ export function setupJest(
      */
     withTimers: async <T>(
       testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
+      testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
       mode: 'fake' | 'real' = 'fake'
     ): Promise<T> => {
       if (mode === 'real') {
         const timers = getTimerManager();
         jest.useRealTimers();
         return Promise.resolve(testFunction(timers));
+        return Promise.resolve(testFunction(timers));
       }
 
+      return runWithFakeTimers(testFunction);
       return runWithFakeTimers(testFunction);
     },
 

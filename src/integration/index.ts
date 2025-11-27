@@ -3,7 +3,7 @@
  * Provides utilities for setup, teardown, and testing integrated components
  */
 
-import { retry, waitFor } from '@kitiumai/test-core';
+import { waitFor } from '@kitiumai/test-core';
 
 /**
  * Integration test context - manages test state and resources

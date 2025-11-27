@@ -72,11 +72,15 @@ export function createMockObject<T extends Record<string, unknown>>(
       if (typeof value === 'function') {
         const mockFunction = createMock(override);
         (result as Record<string, unknown>)[key as string] = mockFunction;
+        const mockFunction = createMock(override);
+        (result as Record<string, unknown>)[key as string] = mockFunction;
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const mockObject = createMockObject(
         const mockObject = createMockObject(
           value as Record<string, unknown>,
           override as Partial<Record<string, MockSetupOptions>>
         );
+        (result as Record<string, unknown>)[key as string] = mockObject;
         (result as Record<string, unknown>)[key as string] = mockObject;
       } else {
         (result as Record<string, unknown>)[key as string] = value;
@@ -104,9 +108,11 @@ export function createMockModule<T extends Record<string, unknown>>(
 
 export function spyOnFunction<T extends (...args: unknown[]) => unknown>(
   function_: T,
+  function_: T,
   options?: MockSetupOptions
 ): MockFunction<T> {
   // Create a wrapper object to spy on
+  const wrapper = { fn: function_ };
   const wrapper = { fn: function_ };
   // Use type assertion to work around jest.spyOn type limitations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -217,6 +223,7 @@ export class ManagedMock<T extends (...args: unknown[]) => unknown> {
   wasCalledWith(...args: Parameters<T>): boolean {
     return this.mock.mock.calls.some(
       (callArguments) => JSON.stringify(callArguments) === JSON.stringify(args)
+      (callArguments) => JSON.stringify(callArguments) === JSON.stringify(args)
     );
   }
 
@@ -256,6 +263,7 @@ export function defineMocks<T extends MockShape>(
     const definition = definitions[key];
     const mockOptions: MockSetupOptions | undefined =
       typeof definition === 'function'
+        ? { implementation: definition as (...args: unknown[]) => unknown }
         ? { implementation: definition as (...args: unknown[]) => unknown }
         : (definition as MockSetupOptions);
 
