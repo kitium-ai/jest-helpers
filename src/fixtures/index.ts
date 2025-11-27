@@ -189,3 +189,13 @@ export function createFixtureHook<T>(
     },
   };
 }
+
+/**
+ * Strongly-typed fixture registry helper.
+ * Allows declaring fixtures with inferred keys and values without string literals.
+ */
+export function defineFixtures<TFixtures extends Record<string, Fixture<unknown>>>(
+  fixtures: TFixtures
+): TFixtures {
+  return fixtures;
+}

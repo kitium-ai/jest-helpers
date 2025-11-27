@@ -11,7 +11,7 @@ export {
   throttle,
   measureTime,
   assertExecutionTime,
-} from '@kitiumai/test-core/timers';
+} from '@kitiumai/test-core';
 
 export type TimerStats = {
   total: number;
@@ -139,8 +139,7 @@ export async function runWithFakeTimers<T>(
 }
 
 // Note: delay and waitFor are kept for backward compatibility
-// but users should prefer sleep() from @kitiumai/test-core/async
-// and waitFor/waitUntil from @kitiumai/test-core/async
+// but users should prefer sleep() and waitFor()/waitForValue() from @kitiumai/test-core
 
 /**
  * Delay promise resolution
@@ -154,7 +153,7 @@ export function delay<T>(ms: number, value?: T): Promise<T | undefined> {
 
 /**
  * Wait with condition polling
- * @deprecated Use waitUntil() from @kitiumai/test-core/async instead
+ * @deprecated Use waitUntil() wrapper in this module or waitFor() from @kitiumai/test-core instead
  */
 export async function waitFor(
   condition: () => boolean,

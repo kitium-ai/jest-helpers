@@ -49,9 +49,21 @@ export type StrictModeOptions = {
    */
   failOnConsoleError?: boolean;
   /**
+   * Fail tests when console output is produced
+   */
+  failOnConsoleNoise?: boolean;
+  /**
    * Timeout for tests (ms)
    */
   timeout?: number;
+  /**
+   * Enforce fake timers or real timers for a preset
+   */
+  timerPolicy?: 'fake' | 'real';
+  /**
+   * Fail tests when timers leak between steps
+   */
+  failOnTimerLeaks?: boolean;
 };
 
 /**
@@ -76,7 +88,10 @@ export function createStrictModePreset(options: StrictModeOptions = {}): {
     fixtures = {},
     failOnUnhandledRejection = true,
     failOnConsoleError = false,
+    failOnConsoleNoise = false,
     timeout = 30000,
+    timerPolicy = 'real',
+    failOnTimerLeaks = true,
   } = options;
 
   // Initialize logger
@@ -105,7 +120,12 @@ export function createStrictModePreset(options: StrictModeOptions = {}): {
     fixtureHooks,
     consoleHooks,
     requestRecorder,
-    enableContextPropagation
+    enableContextPropagation,
+    {
+      timerPolicy,
+      failOnTimerLeaks,
+      failOnConsoleNoise,
+    }
   );
 
   return {
@@ -136,7 +156,10 @@ export const StrictModePresets = {
       logLevel: LogLevel.DEBUG,
       failOnUnhandledRejection: true,
       failOnConsoleError: false,
+      failOnConsoleNoise: true,
       timeout: 10000,
+      timerPolicy: 'fake',
+      failOnTimerLeaks: true,
       ...options,
     });
   },
@@ -156,7 +179,10 @@ export const StrictModePresets = {
       logLevel: LogLevel.INFO,
       failOnUnhandledRejection: true,
       failOnConsoleError: false,
+      failOnConsoleNoise: true,
       timeout: 30000,
+      timerPolicy: 'real',
+      failOnTimerLeaks: true,
       ...options,
     });
   },
@@ -174,7 +200,10 @@ export const StrictModePresets = {
       logLevel: LogLevel.INFO,
       failOnUnhandledRejection: true,
       failOnConsoleError: false,
+      failOnConsoleNoise: true,
       timeout: 60000,
+      timerPolicy: 'real',
+      failOnTimerLeaks: true,
       ...options,
     });
   },
@@ -194,10 +223,19 @@ export const StrictModePresets = {
       logLevel: LogLevel.INFO,
       failOnUnhandledRejection: true,
       failOnConsoleError: false,
+      failOnConsoleNoise: true,
       timeout: 30000,
+      timerPolicy: 'real',
+      failOnTimerLeaks: true,
       ...options,
     });
   },
+};
+
+type LifecycleGuards = {
+  timerPolicy: 'fake' | 'real';
+  failOnTimerLeaks: boolean;
+  failOnConsoleNoise: boolean;
 };
 
 class StrictModeLifecycle {
@@ -206,7 +244,8 @@ class StrictModeLifecycle {
     private readonly fixtureHooks: ReturnType<typeof createAutomaticFixtureHooks> | null,
     private readonly consoleHooks: ReturnType<typeof setupContextAwareConsole> | null,
     private readonly requestRecorder: ReturnType<typeof getRequestRecorder> | null,
-    private readonly enableContextPropagation: boolean
+    private readonly enableContextPropagation: boolean,
+    private readonly guards: LifecycleGuards
   ) {}
 
   async beforeAll(): Promise<void> {
@@ -249,12 +288,30 @@ class StrictModeLifecycle {
       this.consoleHooks.beforeEach();
     }
 
+    if (this.guards.timerPolicy === 'fake') {
+      jest.useFakeTimers();
+    } else {
+      jest.useRealTimers();
+    }
+
     if (this.fixtureHooks) {
       await this.fixtureHooks.beforeEach();
     }
   }
 
   async afterEach(): Promise<void> {
+    if (this.consoleHooks && this.guards.failOnConsoleNoise) {
+      const capture = this.consoleHooks.getCapture();
+      const entries = extractConsoleEntries(capture);
+      if (entries.length > 0) {
+        throw new Error(
+          `Console output detected in test: ${entries
+            .map((entry) => ('level' in entry ? `${(entry as { level: string }).level}: ${String((entry as { message: unknown }).message ?? '')}` : JSON.stringify(entry)))
+            .join('; ')}`
+        );
+      }
+    }
+
     if (this.consoleHooks) {
       this.consoleHooks.afterEach();
     }
@@ -262,6 +319,16 @@ class StrictModeLifecycle {
     if (this.fixtureHooks) {
       await this.fixtureHooks.afterEach();
     }
+
+    if (this.guards.timerPolicy === 'fake' && this.guards.failOnTimerLeaks) {
+      const timerCount = typeof jest.getTimerCount === 'function' ? jest.getTimerCount() : 0;
+      if (timerCount > 0) {
+        jest.clearAllTimers();
+        throw new Error(`Detected ${timerCount} pending timer(s). Ensure fake timers are flushed or disabled.`);
+      }
+    }
+
+    jest.useRealTimers();
   }
 
   async afterAll(): Promise<void> {
@@ -352,4 +419,24 @@ function setupErrorHandlers(
       throw new Error('Console error detected in test');
     };
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractConsoleEntries(capture: any): Array<Record<string, unknown>> {
+  if (!capture) {
+    return [];
+  }
+
+  if (Array.isArray(capture.entries)) {
+    return capture.entries as Array<Record<string, unknown>>;
+  }
+
+  if (typeof capture.getEntries === 'function') {
+    const entries = capture.getEntries();
+    if (Array.isArray(entries)) {
+      return entries as Array<Record<string, unknown>>;
+    }
+  }
+
+  return [];
 }

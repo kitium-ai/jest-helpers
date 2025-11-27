@@ -4,8 +4,8 @@
  */
 
 // Re-export from test-core
-import { retry, waitUntil, sleep } from '@kitiumai/test-core';
-export { retry, waitUntil, sleep };
+import { retry, sleep, waitFor, waitForValue } from '@kitiumai/test-core';
+export { retry, sleep, waitFor, waitForValue };
 
 /**
  * Alias for sleep from test-core (for convenience)
@@ -13,9 +13,22 @@ export { retry, waitUntil, sleep };
 export const delay = sleep;
 
 /**
- * Alias for waitUntil from test-core (for convenience)
- * Note: Uses pollIntervalMs parameter (not interval) to match test-core's waitUntil signature
+ * Compatibility wrapper for the legacy waitUntil helper using the new waitFor API
+ * Note: Uses pollIntervalMs parameter (not interval) to match prior waitUntil signature
  */
+export async function waitUntil(
+  condition: () => boolean | Promise<boolean>,
+  options: { timeoutMs?: number; pollIntervalMs?: number; timeoutMessage?: string } = {}
+): Promise<void> {
+  const { timeoutMs, pollIntervalMs, timeoutMessage } = options;
+
+  return waitFor(condition, {
+    timeout: timeoutMs,
+    interval: pollIntervalMs,
+    timeoutMessage,
+  });
+}
+
 export const waitForCondition = waitUntil;
 
 /**

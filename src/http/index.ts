@@ -125,12 +125,17 @@ export class HttpMockRegistry {
    * Get handler for request
    */
   getHandler(request: HttpRequest): MockHttpHandler | undefined {
-    const key = `${request.method.toUpperCase()}:*`;
-    const handlers = this.handlers.get(key) ?? [];
+    const normalizedMethod = request.method.toUpperCase();
 
-    for (const handler of handlers) {
-      if (this.pathMatches(request.url, handler.path)) {
-        return handler;
+    for (const [key, handlers] of this.handlers.entries()) {
+      if (!key.startsWith(`${normalizedMethod}:`)) {
+        continue;
+      }
+
+      for (const handler of handlers) {
+        if (this.pathMatches(request.url, handler.path)) {
+          return handler;
+        }
       }
     }
 

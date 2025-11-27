@@ -16,7 +16,7 @@ npm install @kitiumai/jest-helpers
 
 - `jest` ^29.0.0
 - `typescript` ^5.0.0
-- `@kitiumai/logger` ^1.5.0 (for console capture features)
+- `@kitiumai/logger` ^2.0.0 (for console capture features)
 
 ## Quick Start
 
@@ -26,6 +26,16 @@ npm install @kitiumai/jest-helpers
 // jest.config.js
 module.exports = {
   setupFilesAfterEnv: ['@kitiumai/jest-helpers/auto-setup'],
+};
+```
+
+Preset-specific drop-ins for clearer defaults:
+
+```javascript
+// jest.config.js
+module.exports = {
+  // Choose the preset that matches your suite
+  setupFilesAfterEnv: ['@kitiumai/jest-helpers/auto-setup/integration'],
 };
 ```
 
@@ -104,22 +114,20 @@ describe('My tests', () => {
 - **`'e2e'`** - Full stack, longer timeouts, all features
 - **`'contract'`** - API contract validation, request recording
 
+Each preset can be auto-registered via `@kitiumai/jest-helpers/auto-setup/<preset>` for copy/paste `jest.config.js` snippets.
+
 ### With Fixtures
 
 ```typescript
-import { setupJest, createFixture } from '@kitiumai/jest-helpers';
+import { setupJest, createFixture, defineFixtures } from '@kitiumai/jest-helpers';
+
+const fixtures = defineFixtures({
+  database: createFixture(async () => setupDatabase(), async (db) => db.close()),
+  api: createFixture(async () => setupApiClient(), async (api) => api.disconnect()),
+});
 
 const test = setupJest('integration', {
-  fixtures: {
-    database: createFixture(
-      async () => await setupDatabase(),
-      async (db) => await db.close()
-    ),
-    api: createFixture(
-      async () => await setupApiClient(),
-      async (api) => await api.disconnect()
-    ),
-  },
+  fixtures,
 });
 
 // Setup hooks
@@ -198,6 +206,37 @@ expect(consoleCapture).toHaveLogWithTraceId('trace-123');
 expect(consoleCapture).toHaveLogWithContext({ userId: 'user-123' });
 expect(context).toHavePropagatedContext();
 ```
+
+### Typed helpers and opinionated timers
+
+- Use `defineFixtures` and `defineMocks` to infer keys/types without stringly-typed lookups.
+- `test.withTimers()` enforces the preset timer policy (fake timers for unit; real timers elsewhere) while keeping cleanup automatic.
+- `failOnTimerLeaks` and `failOnConsoleNoise` defaults guard against noisy or flaky tests; override through the `setupJest` options.
+
+### HTTP/GraphQL happy path
+
+`test.httpClient()` returns a facade that couples HTTP mocking, request recording, and contract assertions:
+
+```typescript
+const test = setupJest('integration');
+const http = test.httpClient();
+
+http.mock.mockGet('/users', { status: 200, data: [{ id: '1' }] });
+
+const response = await http.request({ method: 'GET', url: '/users' });
+expect(response.status).toBe(200);
+expect(http.assertContract({ name: 'list-users', requests: http.requests() }).passed).toBe(true);
+```
+
+### Starter recipes
+
+- **React component**: add `setupFilesAfterEnv: ['@kitiumai/jest-helpers/auto-setup/unit']`, wrap RTL tests with `test.withTimers()` when using fake timers, and declare component fixtures via `defineFixtures`.
+- **Node service integration**: use `auto-setup/integration`, register API/database fixtures with `defineFixtures`, and rely on `test.httpClient()` to stub outbound HTTP.
+- **Contract test**: enable `auto-setup/contract`, mock endpoints with `http.mock`, and export specs using `http.assertContract`.
+
+### Wrapper-first guidance
+
+Prefer the wrapper (`setupJest` or the `auto-setup` entrypoints) for consistent behavior across suites. Namespace exports remain for advanced/custom setups but lack the opinionated presets, guards, and redaction baked into the wrapper.
 
 ### GraphQL & Contract Testing
 
@@ -812,7 +851,7 @@ All features integrate with the 5 internal packages:
 
 - `@kitiumai/config` - Shared configuration
 - `@kitiumai/lint` - Linting rules
-- `@kitiumai/logger` - Structured logging with context (v1.5.0+)
+- `@kitiumai/logger` - Structured logging with context (v2.0.0+)
 - `@kitiumai/scripts` - Build scripts
 - `@kitiumai/test-core` - Core utilities
 
