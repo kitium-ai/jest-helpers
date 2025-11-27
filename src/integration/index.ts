@@ -296,10 +296,13 @@ export const IntegrationAssertions = {
   ): Promise<void> {
     const { timeout = 5000, interval = 100 } = options;
 
-    await waitFor(async () => {
-      const value = await fn();
-      return JSON.stringify(value) === JSON.stringify(expectedValue);
-    }, { timeout, interval });
+    await waitFor(
+      async () => {
+        const value = await fn();
+        return JSON.stringify(value) === JSON.stringify(expectedValue);
+      },
+      { timeout, interval }
+    );
   },
 
   /**

@@ -122,8 +122,14 @@ Each preset can be auto-registered via `@kitiumai/jest-helpers/auto-setup/<prese
 import { setupJest, createFixture, defineFixtures } from '@kitiumai/jest-helpers';
 
 const fixtures = defineFixtures({
-  database: createFixture(async () => setupDatabase(), async (db) => db.close()),
-  api: createFixture(async () => setupApiClient(), async (api) => api.disconnect()),
+  database: createFixture(
+    async () => setupDatabase(),
+    async (db) => db.close()
+  ),
+  api: createFixture(
+    async () => setupApiClient(),
+    async (api) => api.disconnect()
+  ),
 });
 
 const test = setupJest('integration', {

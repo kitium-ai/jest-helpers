@@ -255,7 +255,9 @@ export function defineMocks<T extends MockShape>(
 
     const definition = definitions[key];
     const mockOptions =
-      typeof definition === 'function' ? { implementation: definition } : (definition as MockSetupOptions);
+      typeof definition === 'function'
+        ? { implementation: definition }
+        : (definition as MockSetupOptions);
 
     mocks[key] = createMock(mockOptions) as MockFunction<T[typeof key]>;
   }

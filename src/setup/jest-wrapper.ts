@@ -278,9 +278,7 @@ function safeGetRequestRecorder(
   }
 }
 
-function createHttpClientFacade(
-  recorder: ReturnType<typeof getRequestRecorder> | null
-): {
+function createHttpClientFacade(recorder: ReturnType<typeof getRequestRecorder> | null): {
   registry: HttpMockRegistry;
   mock: HttpMockRegistry;
   request: (request: HttpRequest) => Promise<HttpResponse>;
@@ -322,7 +320,9 @@ function createHttpClientFacade(
     },
     assertContract(spec: ContractSpec) {
       if (!recorder) {
-        throw new Error('Request recording not enabled for this preset. Use the integration/contract presets.');
+        throw new Error(
+          'Request recording not enabled for this preset. Use the integration/contract presets.'
+        );
       }
       return recorder.assertContract(spec);
     },

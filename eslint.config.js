@@ -3,11 +3,7 @@
  * Uses @kitiumai/lint as the base configuration
  */
 
-import {
-  eslintBaseConfig,
-  eslintTypeScriptConfig,
-  eslintJestConfig,
-} from '@kitiumai/lint';
+import { eslintBaseConfig, eslintTypeScriptConfig, eslintJestConfig } from '@kitiumai/lint';
 
 export default [
   ...eslintBaseConfig,

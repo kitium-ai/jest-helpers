@@ -306,7 +306,11 @@ class StrictModeLifecycle {
       if (entries.length > 0) {
         throw new Error(
           `Console output detected in test: ${entries
-            .map((entry) => ('level' in entry ? `${(entry as { level: string }).level}: ${String((entry as { message: unknown }).message ?? '')}` : JSON.stringify(entry)))
+            .map((entry) =>
+              'level' in entry
+                ? `${(entry as { level: string }).level}: ${String((entry as { message: unknown }).message ?? '')}`
+                : JSON.stringify(entry)
+            )
             .join('; ')}`
         );
       }
@@ -324,7 +328,9 @@ class StrictModeLifecycle {
       const timerCount = typeof jest.getTimerCount === 'function' ? jest.getTimerCount() : 0;
       if (timerCount > 0) {
         jest.clearAllTimers();
-        throw new Error(`Detected ${timerCount} pending timer(s). Ensure fake timers are flushed or disabled.`);
+        throw new Error(
+          `Detected ${timerCount} pending timer(s). Ensure fake timers are flushed or disabled.`
+        );
       }
     }
 
