@@ -3,12 +3,16 @@
  * Uses @kitiumai/lint as the base configuration
  */
 
-import { baseConfig, typeScriptConfig, jestConfig } from '@kitiumai/lint/eslint';
+import {
+  eslintBaseConfig,
+  eslintTypeScriptConfig,
+  eslintJestConfig,
+} from '@kitiumai/lint';
 
 export default [
-  ...baseConfig,
-  ...typeScriptConfig,
-  jestConfig,
+  ...eslintBaseConfig,
+  ...eslintTypeScriptConfig,
+  eslintJestConfig,
   {
     ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.cjs'],
   },

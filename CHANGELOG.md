@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Preset-specific auto-setup entrypoints for unit, integration, e2e, and contract suites to enable drop-in Jest configuration.
+- Typed helper factories (`defineFixtures`, `defineMocks`) for safer fixture and mock definitions.
+- `withTimers` helper and stricter timer defaults to keep asynchronous tests consistent across presets.
+- `httpClient` helper to streamline HTTP mocking, recording, and contract assertions.
+
+### Changed
+
+- Strengthened strict-mode guardrails to fail on console noise and improve mock/handler resolution.
+- Updated documentation to highlight the preferred wrapper API and preset-aligned setup guidance.
+
 ## [1.0.0] - 2025-11-24
 
 ### Added
@@ -94,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `consumeStream()` - Consume async iterators
 - `createMockStream()` - Create mock async generators
 - `retry()` - Retry operations (from `@kitiumai/test-core`)
-- `waitUntil()` - Wait for conditions (from `@kitiumai/test-core`)
+- `waitFor()` - Wait for conditions (from `@kitiumai/test-core`)
 - `sleep()` - Delay execution (from `@kitiumai/test-core`)
 - `safeCleanup()` - Safe async cleanup with error handling
 - `withCleanup()` - Run tests with automatic cleanup
@@ -187,19 +201,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking**: Package now focuses on wrapper API (`setupJest()`) as primary interface
-- Re-exported `retry`, `waitUntil`, `sleep` from `@kitiumai/test-core` to avoid duplication
-- Integrated with `@kitiumai/logger` v1.5.0+ for console capture and context propagation
+- Re-exported `retry`, `waitFor`, and `sleep` from `@kitiumai/test-core` to avoid duplication
+- Integrated with `@kitiumai/logger` v2.0.0+ for console capture and context propagation
 - Integrated with `@kitiumai/lint` for consistent code quality
 - All utilities accessible via `test.utils.*` in wrapper mode
 - Console capture now uses `@kitiumai/logger`'s context-aware implementation
 
 ### Dependencies
 
-- `@kitiumai/config` ^0.1.4 - Shared configuration
-- `@kitiumai/lint` ^1.3.5 - Linting rules
-- `@kitiumai/logger` ^1.5.0 - Structured logging with context (for console capture)
-- `@kitiumai/scripts` ^0.2.1 - Build scripts
-- `@kitiumai/test-core` ^0.1.0 - Core test utilities
+- `@kitiumai/config` ^2.0.0 - Shared configuration
+- `@kitiumai/lint` ^2.0.0 - Linting rules
+- `@kitiumai/logger` ^2.0.0 - Structured logging with context (for console capture)
+- `@kitiumai/scripts` ^1.0.0 - Build scripts
+- `@kitiumai/test-core` ^2.0.0 - Core test utilities
 
 ### Features
 

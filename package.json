@@ -80,6 +80,22 @@
     "./auto-setup": {
       "types": "./dist/setup/auto-setup.d.ts",
       "default": "./dist/setup/auto-setup.js"
+    },
+    "./auto-setup/unit": {
+      "types": "./dist/setup/auto-setup.d.ts",
+      "default": "./dist/setup/auto-setup.js"
+    },
+    "./auto-setup/integration": {
+      "types": "./dist/setup/auto-setup.integration.d.ts",
+      "default": "./dist/setup/auto-setup.integration.js"
+    },
+    "./auto-setup/e2e": {
+      "types": "./dist/setup/auto-setup.e2e.d.ts",
+      "default": "./dist/setup/auto-setup.e2e.js"
+    },
+    "./auto-setup/contract": {
+      "types": "./dist/setup/auto-setup.contract.d.ts",
+      "default": "./dist/setup/auto-setup.contract.js"
     }
   },
   "files": [

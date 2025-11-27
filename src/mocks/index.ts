@@ -232,3 +232,33 @@ export class ManagedMock<T extends (...args: unknown[]) => unknown> {
     this.mock.mockRestore();
   }
 }
+
+type MockShape = Record<string, (...args: unknown[]) => unknown>;
+
+type MockDefinition<T extends MockShape> = {
+  [K in keyof T]: T[K] | MockSetupOptions;
+};
+
+/**
+ * Typed helper to declare a map of mocks without repeating string keys.
+ * Each entry can be a concrete implementation (wrapped with jest.fn) or a MockSetupOptions object.
+ */
+export function defineMocks<T extends MockShape>(
+  definitions: MockDefinition<T>
+): { [K in keyof T]: MockFunction<T[K]> } {
+  const mocks = {} as { [K in keyof T]: MockFunction<T[K]> };
+
+  for (const key in definitions) {
+    if (!Object.prototype.hasOwnProperty.call(definitions, key)) {
+      continue;
+    }
+
+    const definition = definitions[key];
+    const mockOptions =
+      typeof definition === 'function' ? { implementation: definition } : (definition as MockSetupOptions);
+
+    mocks[key] = createMock(mockOptions) as MockFunction<T[typeof key]>;
+  }
+
+  return mocks;
+}

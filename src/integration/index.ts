@@ -3,7 +3,7 @@
  * Provides utilities for setup, teardown, and testing integrated components
  */
 
-import { retry, waitUntil } from '@kitiumai/test-core';
+import { retry, waitFor } from '@kitiumai/test-core';
 
 /**
  * Integration test context - manages test state and resources
@@ -296,13 +296,10 @@ export const IntegrationAssertions = {
   ): Promise<void> {
     const { timeout = 5000, interval = 100 } = options;
 
-    await waitUntil(
-      async () => {
-        const value = await fn();
-        return JSON.stringify(value) === JSON.stringify(expectedValue);
-      },
-      { timeoutMs: timeout, pollIntervalMs: interval }
-    );
+    await waitFor(async () => {
+      const value = await fn();
+      return JSON.stringify(value) === JSON.stringify(expectedValue);
+    }, { timeout, interval });
   },
 
   /**

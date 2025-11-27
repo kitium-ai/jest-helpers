@@ -30,7 +30,7 @@ import * as strictMode from './setup/strict-mode';
  */
 export const namespaced = {
   /**
-   * Async utilities (retry, waitUntil, sleep, etc.)
+   * Async utilities (retry, waitFor, waitUntil wrapper, sleep, etc.)
    */
   async: asyncUtils,
 

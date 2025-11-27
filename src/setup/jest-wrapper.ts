@@ -15,16 +15,21 @@
 
 import { StrictModePresets, type StrictModeOptions } from './strict-mode';
 import type { setupContextAwareConsole } from '../console/context-aware';
-import type { getRequestRecorder } from '../http/contract-testing';
+import { getRequestRecorder, type ContractSpec } from '../http/contract-testing';
+import type { HttpRequest, HttpResponse, MockHttpHandler } from '../http';
+import { HttpMockRegistry } from '../http';
 import type * as MocksModule from '../mocks';
 import type * as FixturesModule from '../fixtures';
 import type * as MatchersModule from '../matchers';
 import type * as HttpModule from '../http';
 import type * as AsyncModule from '../async';
 import type * as TimersModule from '../timers';
+import { delay, getTimerManager, runWithFakeTimers } from '../timers';
 import type * as DatabaseModule from '../database';
 
 export type JestPreset = 'unit' | 'integration' | 'e2e' | 'contract';
+
+export type HttpClientFacade = ReturnType<typeof createHttpClientFacade>;
 
 export type JestWrapper = {
   /**
@@ -52,6 +57,19 @@ export type JestWrapper = {
    * Get request recorder (if enabled)
    */
   requests: () => ReturnType<typeof getRequestRecorder>;
+
+  /**
+   * Convenience wrapper around timer policies per test
+   */
+  withTimers: <T>(
+    testFn: (timers: TimersModule.TimerManager) => Promise<T> | T,
+    mode?: 'fake' | 'real'
+  ) => Promise<T>;
+
+  /**
+   * Golden-path HTTP mocking + recording facade
+   */
+  httpClient: () => HttpClientFacade;
 
   /**
    * Access to underlying utilities (for advanced use cases)
@@ -126,6 +144,7 @@ export function setupJest(
   options?: Partial<StrictModeOptions>
 ): JestWrapper {
   const hooks = getPresetHooks(preset, options);
+  let httpClientFacade: HttpClientFacade | null = null;
 
   // Return wrapper with simple API
   // Note: Jest hooks are set up by the user calling the returned functions
@@ -156,6 +175,35 @@ export function setupJest(
      * Get request recorder (if enabled)
      */
     requests: () => hooks.getRequestRecorder(),
+
+    /**
+     * Convenience wrapper around timer policies per test
+     */
+    withTimers: async <T>(
+      testFn: (timers: TimersModule.TimerManager) => Promise<T> | T,
+      mode: 'fake' | 'real' = 'fake'
+    ): Promise<T> => {
+      if (mode === 'real') {
+        const timers = getTimerManager();
+        jest.useRealTimers();
+        return Promise.resolve(testFn(timers));
+      }
+
+      return runWithFakeTimers(testFn);
+    },
+
+    /**
+     * Golden-path HTTP mocking + recording facade
+     */
+    httpClient: () => {
+      if (httpClientFacade) {
+        return httpClientFacade;
+      }
+
+      const recorder = safeGetRequestRecorder(hooks);
+      httpClientFacade = createHttpClientFacade(recorder);
+      return httpClientFacade;
+    },
 
     /**
      * Access to underlying utilities (for advanced use cases)
@@ -219,3 +267,68 @@ export const jestHelpers = {
    */
   contract: () => setupJest('contract'),
 };
+
+function safeGetRequestRecorder(
+  hooks: ReturnType<typeof StrictModePresets.unitTest>
+): ReturnType<typeof getRequestRecorder> | null {
+  try {
+    return hooks.getRequestRecorder();
+  } catch {
+    return null;
+  }
+}
+
+function createHttpClientFacade(
+  recorder: ReturnType<typeof getRequestRecorder> | null
+): {
+  registry: HttpMockRegistry;
+  mock: HttpMockRegistry;
+  request: (request: HttpRequest) => Promise<HttpResponse>;
+  record: (request: HttpRequest) => void;
+  requests: () => HttpRequest[];
+  assertContract: (spec: ContractSpec) => { passed: boolean; failures: string[] };
+  reset: () => void;
+} {
+  const registry = new HttpMockRegistry();
+
+  return {
+    registry,
+    mock: registry,
+    async request(request: HttpRequest): Promise<HttpResponse> {
+      const handler = registry.getHandler(request as HttpRequest & { handler?: MockHttpHandler });
+      if (!handler) {
+        throw new Error(`No HTTP mock registered for ${request.method} ${request.url}`);
+      }
+
+      const response =
+        typeof handler.response === 'function'
+          ? (handler.response as () => HttpResponse)()
+          : handler.response;
+
+      registry.recordRequest(request);
+      recorder?.record(request, response, handler.delay);
+
+      if (handler.delay) {
+        await delay(handler.delay);
+      }
+
+      return response;
+    },
+    record(request: HttpRequest) {
+      registry.recordRequest(request);
+    },
+    requests() {
+      return registry.getRequests();
+    },
+    assertContract(spec: ContractSpec) {
+      if (!recorder) {
+        throw new Error('Request recording not enabled for this preset. Use the integration/contract presets.');
+      }
+      return recorder.assertContract(spec);
+    },
+    reset() {
+      registry.clear();
+      recorder?.clear();
+    },
+  };
+}
