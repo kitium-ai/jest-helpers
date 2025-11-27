@@ -15,16 +15,15 @@
  */
 
 // Core exports (avoiding duplicates)
-export * from './mocks';
-export * from './fixtures';
-export * from './matchers';
-export * from './database';
-export * from './http';
-export * from './setup';
 export * from './async';
+export * from './database';
+export * from './fixtures';
+export * from './http';
+export * from './matchers';
+export * from './mocks';
+export * from './setup';
 
 // Console exports (context-aware console capture)
-export { captureConsoleWithContext, setupContextAwareConsole } from './console';
 export type {
   ConsoleCapture,
   ConsoleCaptureEntry,
@@ -32,43 +31,44 @@ export type {
   ContextAwareConsoleCapture,
   ContextAwareConsoleOutput,
 } from './console';
+export { captureConsoleWithContext, setupContextAwareConsole } from './console';
 
 // Timers exports (with aliases to avoid conflicts)
 export {
-  TimerManager,
-  getTimerManager,
-  createTimerManager,
-  runWithFakeTimers,
-  timeout,
-  measureTime,
   assertExecutionTime,
-  waitFor,
+  createTimerManager,
   debounce,
+  getTimerManager,
+  measureTime,
+  runWithFakeTimers,
   throttle,
+  timeout,
+  TimerManager,
+  waitFor,
 } from './timers';
 // Export timers' withTimeout as withTimeoutTimer to avoid conflict
-export { withTimeout as withTimeoutTimer, delay as delayTimer } from './timers';
+export { delay as delayTimer, withTimeout as withTimeoutTimer } from './timers';
 
 // Integration exports (with aliases to avoid conflicts)
-export { IntegrationTestEnvironment, createIntegrationTestEnvironment } from './integration';
-export type { TestResource, IntegrationTestContext } from './integration';
+export type { IntegrationTestContext, TestResource } from './integration';
+export { createIntegrationTestEnvironment, IntegrationTestEnvironment } from './integration';
 // Export integration's TestDataBuilder as IntegrationTestDataBuilder
 export {
-  TestDataBuilder as IntegrationTestDataBuilder,
   createTestDataBuilder as createIntegrationTestDataBuilder,
+  TestDataBuilder as IntegrationTestDataBuilder,
   withTimeout as withTimeoutIntegration,
 } from './integration';
 
 // Builders exports (with aliases)
 export {
+  createMockFetch,
+  createMockFetchError,
+  createMockFetchResponse,
+  createMockFetchWithRetries,
   createMockProvider,
   createMockProviderWithDefaults,
-  createTestConfig,
   createMockRegistry,
-  createMockFetchResponse,
-  createMockFetchError,
-  createMockFetch,
-  createMockFetchWithRetries,
+  createTestConfig,
 } from './builders';
 // Export builders' TestDataBuilder as BuilderTestDataBuilder
 export {
@@ -78,14 +78,14 @@ export {
 
 // Enhanced exports (context-aware, automatic cleanup, etc.)
 export * from './fixtures/registry';
-export * from './matchers/observability';
-export * from './http/graphql';
 export * from './http/contract-testing';
+export * from './http/graphql';
+export * from './matchers/observability';
 export * from './setup/strict-mode';
 
 // MAIN ENTRY POINT - Simple wrapper API (recommended)
-export { setupJest, jestHelpers } from './setup/jest-wrapper';
-export type { JestWrapper, JestPreset } from './setup/jest-wrapper';
+export type { JestPreset, JestWrapper } from './setup/jest-wrapper';
+export { jestHelpers, setupJest } from './setup/jest-wrapper';
 
 // Auto-setup export (for jest.config.js setupFilesAfterEnv)
 // Import '@kitiumai/jest-helpers/auto-setup' in your jest.config.js

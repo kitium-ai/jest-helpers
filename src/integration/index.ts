@@ -3,7 +3,7 @@
  * Provides utilities for setup, teardown, and testing integrated components
  */
 
-import { retry, waitFor } from '@kitiumai/test-core';
+import { waitFor } from '@kitiumai/test-core';
 
 /**
  * Integration test context - manages test state and resources
@@ -148,26 +148,26 @@ export class TestScenario {
   /**
    * Add setup step
    */
-  beforeEach(fn: () => Promise<void>): this {
-    this.beforeEachFn = fn;
+  beforeEach(function_: () => Promise<void>): this {
+    this.beforeEachFn = function_;
     return this;
   }
 
   /**
    * Add teardown step
    */
-  afterEach(fn: () => Promise<void>): this {
-    this.afterEachFn = fn;
+  afterEach(function_: () => Promise<void>): this {
+    this.afterEachFn = function_;
     return this;
   }
 
   /**
    * Add a test step
    */
-  step(name: string, fn: () => Promise<void>): this {
+  step(name: string, function_: () => Promise<void>): this {
     this.steps.push(async () => {
       console.log(`  → ${name}`);
-      await fn();
+      await function_();
     });
     return this;
   }
@@ -290,7 +290,7 @@ export const IntegrationAssertions = {
    * Assert state consistency
    */
   async assertEventuallyConsistent<T>(
-    fn: () => Promise<T>,
+    function_: () => Promise<T>,
     expectedValue: T,
     options: { timeout?: number; interval?: number } = {}
   ): Promise<void> {
@@ -298,7 +298,7 @@ export const IntegrationAssertions = {
 
     await waitFor(
       async () => {
-        const value = await fn();
+        const value = await function_();
         return JSON.stringify(value) === JSON.stringify(expectedValue);
       },
       { timeout, interval }
@@ -352,11 +352,11 @@ export async function runTestsInParallel<T>(
   const results: T[] = [];
   const executing: Array<Promise<T>> = [];
 
-  for (let i = 0; i < tests.length; i++) {
-    const test = tests[i];
+  for (let index = 0; index < tests.length; index++) {
+    const test = tests[index];
     const promise = Promise.resolve().then(test);
 
-    results[i] = await promise;
+    results[index] = await promise;
 
     if (executing.length >= concurrency) {
       await Promise.race(executing);
@@ -390,7 +390,7 @@ export async function runTestsSequentially<T>(tests: Array<() => Promise<T>>): P
  * Test retry helper with reporting
  */
 export async function retryTestWithReport<T>(
-  testFn: () => Promise<T>,
+  testFunction: () => Promise<T>,
   options: {
     maxAttempts?: number;
     delayMs?: number;
@@ -399,20 +399,32 @@ export async function retryTestWithReport<T>(
 ): Promise<T> {
   const { maxAttempts = 3, delayMs = 100, onRetry } = options;
 
-  return retry(testFn, {
-    maxAttempts,
-    delayMs,
-    onRetry: (attempt, error) => {
-      console.log(`Retry attempt ${attempt}/${maxAttempts}: ${error.message}`);
-      onRetry?.(attempt, error);
-    },
-  });
+  let lastError: Error = new Error('Retry failed');
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await testFunction();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxAttempts) {
+        console.log(`Retry attempt ${attempt}/${maxAttempts}: ${lastError.message}`);
+        onRetry?.(attempt, lastError);
+
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 /**
  * Timeout helper for test execution
  */
-export async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+export async function withTimeout<T>(function_: () => Promise<T>, timeoutMs: number): Promise<T> {
   let completed = false;
   let result: T;
 
@@ -425,7 +437,7 @@ export async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): P
   });
 
   try {
-    result = await Promise.race([fn(), timeoutPromise]);
+    result = await Promise.race([function_(), timeoutPromise]);
     completed = true;
     return result;
   } catch (e) {
@@ -443,21 +455,21 @@ export class TestCleanupManager {
   /**
    * Register cleanup function
    */
-  onCleanup(fn: () => Promise<void>): void {
-    this.cleanupFns.push(fn);
+  onCleanup(function_: () => Promise<void>): void {
+    this.cleanupFns.push(function_);
   }
 
   /**
    * Execute all cleanup functions in reverse order
    */
   async cleanup(): Promise<void> {
-    for (let i = this.cleanupFns.length - 1; i >= 0; i--) {
-      const cleanupFn = this.cleanupFns[i];
-      if (!cleanupFn) {
+    for (let index = this.cleanupFns.length - 1; index >= 0; index--) {
+      const cleanupFunction = this.cleanupFns[index];
+      if (!cleanupFunction) {
         continue;
       }
       try {
-        await cleanupFn();
+        await cleanupFunction();
       } catch (_error) {
         // Cleanup errors are logged but don't fail the test
         if (process.env['DEBUG']) {

@@ -4,6 +4,7 @@
  */
 
 import { contextManager, getLogger } from '@kitiumai/logger';
+
 import type { Fixture } from './index';
 
 type RegisteredFixture<T> = {
@@ -95,8 +96,8 @@ export class AutomaticFixtureRegistry {
     const errors: Error[] = [];
 
     // Cleanup in reverse order
-    for (let i = this.cleanupOrder.length - 1; i >= 0; i--) {
-      const name = this.cleanupOrder[i];
+    for (let index = this.cleanupOrder.length - 1; index >= 0; index--) {
+      const name = this.cleanupOrder[index];
       if (!name) {
         continue;
       }
@@ -123,9 +124,9 @@ export class AutomaticFixtureRegistry {
         registered.setup = false;
         registered.data = null;
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        errors.push(err);
-        this.logger.error(`Failed to cleanup fixture: ${name}`, { fixtureName: name }, err);
+        const error_ = error instanceof Error ? error : new Error(String(error));
+        errors.push(error_);
+        this.logger.error(`Failed to cleanup fixture: ${name}`, { fixtureName: name }, error_);
       }
     }
 

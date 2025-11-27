@@ -4,11 +4,11 @@
  */
 
 import {
-  getLogger,
-  contextManager,
-  type LogContext,
   type ConsoleCapture,
   type ConsoleCaptureEntry,
+  contextManager,
+  getLogger,
+  type LogContext,
 } from '@kitiumai/logger';
 
 declare global {
@@ -65,8 +65,8 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
     const logs = Array.isArray(received) ? received : received.entries;
     const filteredLogs = level ? logs.filter((log) => log.level === level) : logs;
 
-    const messageStr = typeof message === 'string' ? message : message.source;
-    const regex = typeof message === 'string' ? new RegExp(messageStr, 'i') : message;
+    const messageString = typeof message === 'string' ? message : message.source;
+    const regex = typeof message === 'string' ? new RegExp(messageString, 'i') : message;
 
     const hasMatch = filteredLogs.some((log: ConsoleCaptureEntry | LogEntry) => {
       const logMessage = Array.isArray(log.message) ? log.message.join(' ') : String(log.message);
@@ -77,8 +77,8 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
       pass: hasMatch,
       message: () =>
         hasMatch
-          ? `expected logs not to contain message matching ${messageStr}${level ? ` at level ${level}` : ''}`
-          : `expected logs to contain message matching ${messageStr}${level ? ` at level ${level}` : ''}`,
+          ? `expected logs not to contain message matching ${messageString}${level ? ` at level ${level}` : ''}`
+          : `expected logs to contain message matching ${messageString}${level ? ` at level ${level}` : ''}`,
     };
   },
 
