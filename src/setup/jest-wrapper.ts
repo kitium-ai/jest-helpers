@@ -13,19 +13,24 @@
  * ```
  */
 
-import { StrictModePresets, type StrictModeOptions } from './strict-mode';
-import type { setupContextAwareConsole } from '../console/context-aware';
-import { getRequestRecorder, type ContractSpec } from '../http/contract-testing';
-import type { HttpRequest, HttpResponse, MockHttpHandler } from '../http';
-import { HttpMockRegistry } from '../http';
-import type * as MocksModule from '../mocks';
-import type * as FixturesModule from '../fixtures';
-import type * as MatchersModule from '../matchers';
-import type * as HttpModule from '../http';
 import type * as AsyncModule from '../async';
+import type { setupContextAwareConsole } from '../console/context-aware';
+import type * as DatabaseModule from '../database';
+import type * as FixturesModule from '../fixtures';
+import type * as HttpModule from '../http';
+import {
+  HttpMockRegistry,
+  type HttpRequest,
+  type HttpResponse,
+  type MockHttpHandler,
+} from '../http';
+import type { getRequestRecorder } from '../http/contract-testing';
+import { type ContractSpec } from '../http/contract-testing';
+import type * as MatchersModule from '../matchers';
+import type * as MocksModule from '../mocks';
 import type * as TimersModule from '../timers';
 import { delay, getTimerManager, runWithFakeTimers } from '../timers';
-import type * as DatabaseModule from '../database';
+import { type StrictModeOptions, StrictModePresets } from './strict-mode';
 
 export type JestPreset = 'unit' | 'integration' | 'e2e' | 'contract';
 
@@ -62,7 +67,7 @@ export type JestWrapper = {
    * Convenience wrapper around timer policies per test
    */
   withTimers: <T>(
-    testFn: (timers: TimersModule.TimerManager) => Promise<T> | T,
+    testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
     mode?: 'fake' | 'real'
   ) => Promise<T>;
 
@@ -180,16 +185,16 @@ export function setupJest(
      * Convenience wrapper around timer policies per test
      */
     withTimers: async <T>(
-      testFn: (timers: TimersModule.TimerManager) => Promise<T> | T,
+      testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
       mode: 'fake' | 'real' = 'fake'
     ): Promise<T> => {
       if (mode === 'real') {
         const timers = getTimerManager();
         jest.useRealTimers();
-        return Promise.resolve(testFn(timers));
+        return Promise.resolve(testFunction(timers));
       }
 
-      return runWithFakeTimers(testFn);
+      return runWithFakeTimers(testFunction);
     },
 
     /**

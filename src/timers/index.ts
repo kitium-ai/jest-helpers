@@ -5,12 +5,12 @@
 
 // Re-export framework-agnostic timer utilities from test-core
 export {
+  assertExecutionTime,
+  debounce,
+  measureTime,
+  throttle,
   timeout,
   withTimeout,
-  debounce,
-  throttle,
-  measureTime,
-  assertExecutionTime,
 } from '@kitiumai/test-core';
 
 export type TimerStats = {
@@ -126,13 +126,13 @@ export function createTimerManager(): TimerManager {
  * Run test with fake timers
  */
 export async function runWithFakeTimers<T>(
-  testFn: (timers: TimerManager) => T | Promise<T>
+  testFunction: (timers: TimerManager) => T | Promise<T>
 ): Promise<T> {
   const manager = createTimerManager();
   manager.enableFakeTimers();
 
   try {
-    return await testFn(manager);
+    return await testFunction(manager);
   } finally {
     manager.disableFakeTimers();
   }

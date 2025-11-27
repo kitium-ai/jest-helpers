@@ -177,14 +177,14 @@ export class HttpMockRegistry {
    * Get requests by method
    */
   getRequestsByMethod(method: string): HttpRequest[] {
-    return this.requests.filter((req) => req.method.toUpperCase() === method.toUpperCase());
+    return this.requests.filter((request) => request.method.toUpperCase() === method.toUpperCase());
   }
 
   /**
    * Get requests by path
    */
   getRequestsByPath(path: string): HttpRequest[] {
-    return this.requests.filter((req) => req.url.includes(path));
+    return this.requests.filter((request) => request.url.includes(path));
   }
 
   /**
@@ -192,7 +192,8 @@ export class HttpMockRegistry {
    */
   wasRequestMade(method: string, path: string): boolean {
     return this.requests.some(
-      (req) => req.method.toUpperCase() === method.toUpperCase() && req.url.includes(path)
+      (request) =>
+        request.method.toUpperCase() === method.toUpperCase() && request.url.includes(path)
     );
   }
 
@@ -484,7 +485,7 @@ export class HttpMockServer {
    * Get requests matching a pattern
    */
   getRequestsMatching(matcher: RequestMatcher): HttpRequest[] {
-    return this.requests.filter((req) => this.matchesPattern(req, matcher));
+    return this.requests.filter((request) => this.matchesPattern(request, matcher));
   }
 
   /**

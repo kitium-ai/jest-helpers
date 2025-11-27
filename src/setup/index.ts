@@ -77,7 +77,7 @@ export class TestEnvironment {
       (...args: unknown[]) => {
         this.consoleOutput.push({
           level,
-          message: args.map((arg) => String(arg)),
+          message: args.map((argument) => String(argument)),
         });
       };
 
@@ -193,31 +193,31 @@ export class TestEnvironment {
 /**
  * Global test environment instance
  */
-let globalTestEnv: TestEnvironment | null = null;
+let globalTestEnvironment: TestEnvironment | null = null;
 
 /**
  * Get global test environment
  */
 export function getGlobalTestEnvironment(): TestEnvironment {
-  globalTestEnv ??= new TestEnvironment();
-  return globalTestEnv;
+  globalTestEnvironment ??= new TestEnvironment();
+  return globalTestEnvironment;
 }
 
 /**
  * Setup global test environment
  */
 export function setupGlobalTestEnvironment(options?: TestSetupOptions): TestEnvironment {
-  const env = getGlobalTestEnvironment();
-  env.setup(options);
-  return env;
+  const environment = getGlobalTestEnvironment();
+  environment.setup(options);
+  return environment;
 }
 
 /**
  * Cleanup global test environment
  */
 export function cleanupGlobalTestEnvironment(): void {
-  const env = getGlobalTestEnvironment();
-  env.cleanup();
+  const environment = getGlobalTestEnvironment();
+  environment.cleanup();
 }
 
 /**
@@ -229,21 +229,21 @@ export function setupTestSuite(options?: TestSetupOptions): {
   afterAll(): void;
   getEnv(): TestEnvironment;
 } {
-  const env = setupGlobalTestEnvironment(options);
+  const environment = setupGlobalTestEnvironment(options);
 
   return {
     beforeAll(): void {
       // Setup already done
     },
     afterEach(): void {
-      env.clearConsoleOutput();
+      environment.clearConsoleOutput();
       jest.clearAllMocks();
     },
     afterAll(): void {
-      env.cleanup();
+      environment.cleanup();
     },
     getEnv(): TestEnvironment {
-      return env;
+      return environment;
     },
   };
 }

@@ -25,7 +25,7 @@ export type GraphQLResponse = {
 export type GraphQLMock = {
   operationName?: string;
   query?: string | RegExp;
-  variables?: Record<string, unknown> | ((vars: Record<string, unknown>) => boolean);
+  variables?: Record<string, unknown> | ((variables: Record<string, unknown>) => boolean);
   response: GraphQLResponse | (() => GraphQLResponse);
   delay?: number;
 };
@@ -53,7 +53,7 @@ export class GraphQLMockRegistry {
     response: GraphQLResponse | (() => GraphQLResponse),
     options?: {
       query?: string | RegExp;
-      variables?: Record<string, unknown> | ((vars: Record<string, unknown>) => boolean);
+      variables?: Record<string, unknown> | ((variables: Record<string, unknown>) => boolean);
       delay?: number;
     }
   ): void {
@@ -81,7 +81,7 @@ export class GraphQLMockRegistry {
     response: GraphQLResponse | (() => GraphQLResponse),
     options?: {
       query?: string | RegExp;
-      variables?: Record<string, unknown> | ((vars: Record<string, unknown>) => boolean);
+      variables?: Record<string, unknown> | ((variables: Record<string, unknown>) => boolean);
       delay?: number;
     }
   ): void {
@@ -165,7 +165,7 @@ export class GraphQLMockRegistry {
   getRequestsByOperation(
     operationName: string
   ): Array<GraphQLRequest & { timestamp: number; traceId?: string }> {
-    return this.requests.filter((req) => req.operationName === operationName);
+    return this.requests.filter((request) => request.operationName === operationName);
   }
 
   /**
@@ -174,7 +174,7 @@ export class GraphQLMockRegistry {
   getRequestsByTraceId(
     traceId: string
   ): Array<GraphQLRequest & { timestamp: number; traceId?: string }> {
-    return this.requests.filter((req) => req.traceId === traceId);
+    return this.requests.filter((request) => request.traceId === traceId);
   }
 
   /**
@@ -235,11 +235,11 @@ export class GraphQLMockRegistry {
             return false;
           }
         } else {
-          const mockVars = m.variables as Record<string, unknown>;
-          const varsMatch = Object.keys(mockVars).every((key) => {
-            return request.variables?.[key] === mockVars[key];
+          const mockVariables = m.variables as Record<string, unknown>;
+          const variablesMatch = Object.keys(mockVariables).every((key) => {
+            return request.variables?.[key] === mockVariables[key];
           });
-          if (!varsMatch) {
+          if (!variablesMatch) {
             return false;
           }
         }

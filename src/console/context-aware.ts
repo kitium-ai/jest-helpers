@@ -5,9 +5,9 @@
 
 import {
   captureConsole,
-  contextManager,
   type ConsoleCapture,
   type ConsoleCaptureOptions,
+  contextManager,
 } from '@kitiumai/logger';
 
 // Re-export types for convenience

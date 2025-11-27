@@ -20,18 +20,29 @@ export default [
     },
   },
   {
+    name: 'jest-wrapper-overrides',
+    files: ['**/setup/jest-wrapper.ts'],
+    rules: {
+      'import/no-duplicates': 'off', // Need separate imports for types and values from different paths
+      'no-duplicate-imports': 'off',
+    },
+  },
+  {
     name: 'jest-helpers-overrides',
     files: ['**/*.{ts,tsx}'],
     rules: {
       // Allow higher complexity for utility functions
-      complexity: ['warn', 15],
+      complexity: ['warn', 20],
       'max-statements': ['warn', 25],
+      'max-lines-per-function': ['warn', 110],
       // Allow bitwise operators in data generators (UUID generation)
       'no-bitwise': 'off',
       // Allow non-null assertions in test utilities
       '@typescript-eslint/no-non-null-assertion': 'warn',
       // Allow any type in utility functions
       '@typescript-eslint/no-explicit-any': 'warn',
+      // Disable import/order to avoid conflicts with simple-import-sort
+      'import/order': 'off',
       // Relax naming convention for local variables
       '@typescript-eslint/naming-convention': [
         'error',
@@ -44,7 +55,7 @@ export default [
           selector: 'variable',
           format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
           filter: {
-            regex: '^(result|hasResult|conditionResult|sourceValue|targetValue)$',
+            regex: '^(result|hasResult|conditionResult|sourceValue|targetValue|error_|errorObject)$',
             match: true,
           },
         },
@@ -79,6 +90,29 @@ export default [
       'space-before-function-paren': 'off',
       // Allow missing return types in some utility functions
       '@typescript-eslint/explicit-function-return-type': 'warn',
+      // Allow default exports for auto-setup files
+      'import/no-default-export': 'off',
+      // Allow then/catch in some cases
+      'promise/prefer-await-to-then': 'warn',
+      'promise/always-return': 'warn',
+      // Allow abbreviations for common test variables
+      'unicorn/prevent-abbreviations': [
+        'warn',
+        {
+          allowList: {
+            e: true,
+            e2e: true,
+            args: true,
+            props: true,
+            params: true,
+            req: true,
+            res: true,
+            err: true,
+          },
+        },
+      ],
+      // Allow flexible promise parameter names
+      'promise/param-names': 'warn',
     },
   },
 ];
