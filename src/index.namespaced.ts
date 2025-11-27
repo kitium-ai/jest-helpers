@@ -7,22 +7,21 @@
 import * as asyncUtils from './async';
 import * as builders from './builders';
 import * as consoleUtils from './console';
-import * as databaseUtils from './database';
-import * as fixtures from './fixtures';
-import * as httpUtils from './http';
-import * as integrationUtils from './integration';
-import * as matchers from './matchers';
-import * as mocks from './mocks';
-import * as setupUtils from './setup';
-import * as timers from './timers';
-
 // Enhanced modules
 import * as contextAwareConsole from './console/context-aware';
+import * as databaseUtils from './database';
+import * as fixtures from './fixtures';
 import * as automaticFixtures from './fixtures/registry';
-import * as observabilityMatchers from './matchers/observability';
-import * as graphqlUtils from './http/graphql';
+import * as httpUtils from './http';
 import * as contractTesting from './http/contract-testing';
+import * as graphqlUtils from './http/graphql';
+import * as integrationUtils from './integration';
+import * as matchers from './matchers';
+import * as observabilityMatchers from './matchers/observability';
+import * as mocks from './mocks';
+import * as setupUtils from './setup';
 import * as strictMode from './setup/strict-mode';
+import * as timers from './timers';
 
 /**
  * Namespace exports for organized imports

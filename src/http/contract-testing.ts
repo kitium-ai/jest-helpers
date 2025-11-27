@@ -4,6 +4,7 @@
  */
 
 import { contextManager, getLogger } from '@kitiumai/logger';
+
 import type { HttpRequest, HttpResponse } from './index';
 
 export type RecordedRequest = {
@@ -66,7 +67,7 @@ export class RequestRecorder {
    * Get requests by method
    */
   getByMethod(method: string): RecordedRequest[] {
-    return this.requests.filter((req) => req.method.toUpperCase() === method.toUpperCase());
+    return this.requests.filter((request) => request.method.toUpperCase() === method.toUpperCase());
   }
 
   /**
@@ -74,14 +75,14 @@ export class RequestRecorder {
    */
   getByUrl(pattern: string | RegExp): RecordedRequest[] {
     const regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern;
-    return this.requests.filter((req) => regex.test(req.url));
+    return this.requests.filter((request) => regex.test(request.url));
   }
 
   /**
    * Get requests by trace ID
    */
   getByTraceId(traceId: string): RecordedRequest[] {
-    return this.requests.filter((req) => req.traceId === traceId);
+    return this.requests.filter((request) => request.traceId === traceId);
   }
 
   /**
@@ -112,11 +113,11 @@ export class RequestRecorder {
 
     // Match requests
     for (const specRequest of spec.requests) {
-      const matching = this.requests.find((req) => {
+      const matching = this.requests.find((request) => {
         return (
-          req.method === specRequest.method &&
-          req.url === specRequest.url &&
-          Math.abs(req.timestamp - specRequest.timestamp) < 1000 // Within 1 second
+          request.method === specRequest.method &&
+          request.url === specRequest.url &&
+          Math.abs(request.timestamp - specRequest.timestamp) < 1000 // Within 1 second
         );
       });
 

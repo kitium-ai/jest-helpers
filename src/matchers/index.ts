@@ -103,7 +103,7 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
 
     const mock = received as jest.Mock;
     const pass = mock.mock.calls.some((args) => {
-      return args.some((arg: unknown) => JSON.stringify(arg) === JSON.stringify(object));
+      return args.some((argument: unknown) => JSON.stringify(argument) === JSON.stringify(object));
     });
 
     return {

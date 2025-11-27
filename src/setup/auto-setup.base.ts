@@ -1,5 +1,4 @@
-import type { JestPreset } from './jest-wrapper';
-import { setupJest } from './jest-wrapper';
+import { type JestPreset, setupJest } from './jest-wrapper';
 
 /**
  * Shared helper for auto-setup entrypoints.

@@ -4,11 +4,13 @@
  */
 
 import { contextManager, LoggerBuilder, LogLevel } from '@kitiumai/logger';
-import { setupCustomMatchers } from '../matchers';
-import { setupObservabilityMatchers } from '../matchers/observability';
+
 import { setupContextAwareConsole } from '../console/context-aware';
 import { createAutomaticFixtureHooks } from '../fixtures/registry';
 import { getRequestRecorder } from '../http/contract-testing';
+import { setupCustomMatchers } from '../matchers';
+import { setupObservabilityMatchers } from '../matchers/observability';
+
 import type { Fixture } from '../fixtures';
 
 export type StrictModeOptions = {

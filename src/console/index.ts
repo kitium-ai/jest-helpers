@@ -3,7 +3,6 @@
  * Re-exports context-aware console utilities
  */
 
-export { captureConsoleWithContext, setupContextAwareConsole } from './context-aware';
 export type {
   ConsoleCapture,
   ConsoleCaptureEntry,
@@ -11,6 +10,7 @@ export type {
   ContextAwareConsoleCapture,
   ContextAwareConsoleOutput,
 } from './context-aware';
+export { captureConsoleWithContext, setupContextAwareConsole } from './context-aware';
 
 // Re-export for backward compatibility
 export { restoreConsole } from '@kitiumai/logger';

@@ -70,14 +70,14 @@ export function createMockObject<T extends Record<string, unknown>>(
       const override = mockOverrides?.[key];
 
       if (typeof value === 'function') {
-        const mockFn = createMock(override);
-        (result as Record<string, unknown>)[key as string] = mockFn;
+        const mockFunction = createMock(override);
+        (result as Record<string, unknown>)[key as string] = mockFunction;
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        const mockObj = createMockObject(
+        const mockObject = createMockObject(
           value as Record<string, unknown>,
           override as Partial<Record<string, MockSetupOptions>>
         );
-        (result as Record<string, unknown>)[key as string] = mockObj;
+        (result as Record<string, unknown>)[key as string] = mockObject;
       } else {
         (result as Record<string, unknown>)[key as string] = value;
       }
@@ -103,11 +103,11 @@ export function createMockModule<T extends Record<string, unknown>>(
  */
 
 export function spyOnFunction<T extends (...args: unknown[]) => unknown>(
-  fn: T,
+  function_: T,
   options?: MockSetupOptions
 ): MockFunction<T> {
   // Create a wrapper object to spy on
-  const wrapper = { fn };
+  const wrapper = { fn: function_ };
   // Use type assertion to work around jest.spyOn type limitations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const spy = jest.spyOn(wrapper as any, 'fn') as unknown as jest.Mock<
@@ -216,7 +216,7 @@ export class ManagedMock<T extends (...args: unknown[]) => unknown> {
 
   wasCalledWith(...args: Parameters<T>): boolean {
     return this.mock.mock.calls.some(
-      (callArgs) => JSON.stringify(callArgs) === JSON.stringify(args)
+      (callArguments) => JSON.stringify(callArguments) === JSON.stringify(args)
     );
   }
 
@@ -254,9 +254,9 @@ export function defineMocks<T extends MockShape>(
     }
 
     const definition = definitions[key];
-    const mockOptions =
+    const mockOptions: MockSetupOptions =
       typeof definition === 'function'
-        ? { implementation: definition }
+        ? { implementation: definition as (...args: unknown[]) => unknown }
         : (definition as MockSetupOptions);
 
     mocks[key] = createMock(mockOptions) as MockFunction<T[typeof key]>;

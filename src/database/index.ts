@@ -5,9 +5,9 @@
 export type DatabaseConnection = {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
-  query(sql: string, params?: unknown[]): Promise<unknown>;
-  execute(sql: string, params?: unknown[]): Promise<void>;
-  transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T>;
+  query(sql: string, parameters?: unknown[]): Promise<unknown>;
+  execute(sql: string, parameters?: unknown[]): Promise<void>;
+  transaction<T>(function_: (conn: DatabaseConnection) => Promise<T>): Promise<T>;
   seed(data: Record<string, unknown[]>): Promise<void>;
   clear(tables?: string[]): Promise<void>;
 };
@@ -51,7 +51,7 @@ export class TestDatabase implements DatabaseConnection {
     await Promise.resolve();
   }
 
-  async query(_sql: string, _params?: unknown[]): Promise<unknown> {
+  async query(_sql: string, _parameters?: unknown[]): Promise<unknown> {
     if (!this.connected) {
       throw new Error('Database not connected');
     }
@@ -64,7 +64,7 @@ export class TestDatabase implements DatabaseConnection {
     };
   }
 
-  async execute(_sql: string, _params?: unknown[]): Promise<void> {
+  async execute(_sql: string, _parameters?: unknown[]): Promise<void> {
     if (!this.connected) {
       throw new Error('Database not connected');
     }
@@ -73,12 +73,12 @@ export class TestDatabase implements DatabaseConnection {
     await Promise.resolve();
   }
 
-  async transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T> {
+  async transaction<T>(function_: (conn: DatabaseConnection) => Promise<T>): Promise<T> {
     if (!this.connected) {
       throw new Error('Database not connected');
     }
 
-    return await fn(this);
+    return await function_(this);
   }
 
   async seed(data: Record<string, unknown[]>): Promise<void> {
@@ -131,15 +131,15 @@ export function createDatabaseFixture(config: DatabaseConfig): {
   setup: () => Promise<TestDatabase>;
   teardown: () => Promise<void>;
 } {
-  const db = createTestDatabase(config);
+  const database = createTestDatabase(config);
 
   return {
     async setup() {
-      await db.connect();
-      return db;
+      await database.connect();
+      return database;
     },
     async teardown() {
-      await db.disconnect();
+      await database.disconnect();
     },
   };
 }
@@ -162,9 +162,9 @@ export class DatabaseDataBuilder {
     return this;
   }
 
-  async seedInto(db: DatabaseConnection): Promise<void> {
+  async seedInto(database: DatabaseConnection): Promise<void> {
     const data = Object.fromEntries(this.tables);
-    await db.seed(data);
+    await database.seed(data);
   }
 
   getData(): Record<string, unknown[]> {
@@ -188,22 +188,22 @@ export function createDataBuilder(): DatabaseDataBuilder {
  * Reset database and seed with fresh data
  */
 export async function resetDatabaseWithSeed(
-  db: DatabaseConnection,
+  database: DatabaseConnection,
   seedData: Record<string, unknown[]>
 ): Promise<void> {
-  await db.clear();
-  await db.seed(seedData);
+  await database.clear();
+  await database.seed(seedData);
 }
 
 /**
  * Verify data in database
  */
 export async function verifyDatabaseData(
-  db: DatabaseConnection,
+  database: DatabaseConnection,
   table: string,
   expectedData: unknown[]
 ): Promise<boolean> {
-  const result = await db.query(`SELECT * FROM ${table}`);
+  const result = await database.query(`SELECT * FROM ${table}`);
   const rows = (result as { rows: unknown[] }).rows ?? [];
   return JSON.stringify(rows) === JSON.stringify(expectedData);
 }

@@ -106,12 +106,12 @@ export function createFixture<T>(
  */
 export async function withFixture<T>(
   fixture: Fixture<T>,
-  testFn: (data: T) => Promise<void> | void
+  testFunction: (data: T) => Promise<void> | void
 ): Promise<void> {
   const data = await fixture.setup();
 
   try {
-    await testFn(data);
+    await testFunction(data);
   } finally {
     await fixture.teardown(data);
   }
@@ -122,7 +122,7 @@ export async function withFixture<T>(
  */
 export async function withFixtures<T extends Record<string, unknown>>(
   fixtures: Record<keyof T, Fixture<T[keyof T]>>,
-  testFn: (context: T) => Promise<void> | void
+  testFunction: (context: T) => Promise<void> | void
 ): Promise<void> {
   const context = {} as T;
 
@@ -139,7 +139,7 @@ export async function withFixtures<T extends Record<string, unknown>>(
       }
     }
 
-    await testFn(context);
+    await testFunction(context);
   } finally {
     for (const key in fixtures) {
       if (!Object.prototype.hasOwnProperty.call(fixtures, key)) {

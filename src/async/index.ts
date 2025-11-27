@@ -5,6 +5,7 @@
 
 // Re-export from test-core
 import { retry, sleep, waitFor, waitForValue } from '@kitiumai/test-core';
+
 export { retry, sleep, waitFor, waitForValue };
 
 /**
@@ -22,11 +23,20 @@ export async function waitUntil(
 ): Promise<void> {
   const { timeoutMs, pollIntervalMs, timeoutMessage } = options;
 
-  return waitFor(condition, {
-    timeout: timeoutMs,
-    interval: pollIntervalMs,
-    timeoutMessage,
-  });
+  const waitForOptions: { timeout?: number; interval?: number; timeoutMessage?: string } = {};
+  if (timeoutMs !== undefined) {
+    waitForOptions.timeout = timeoutMs;
+  }
+
+  if (pollIntervalMs !== undefined) {
+    waitForOptions.interval = pollIntervalMs;
+  }
+
+  if (timeoutMessage !== undefined) {
+    waitForOptions.timeoutMessage = timeoutMessage;
+  }
+
+  return waitFor(condition, waitForOptions);
 }
 
 export const waitForCondition = waitUntil;
@@ -124,9 +134,9 @@ export async function waitForPromise<T>(
 /**
  * Safe async cleanup helper
  */
-export async function safeCleanup(cleanupFn: () => void | Promise<void>): Promise<void> {
+export async function safeCleanup(cleanupFunction: () => void | Promise<void>): Promise<void> {
   try {
-    await cleanupFn();
+    await cleanupFunction();
   } catch (error) {
     // Ignore cleanup errors
     if (process.env['DEBUG']) {
@@ -145,11 +155,11 @@ export async function safeCleanup(cleanupFn: () => void | Promise<void>): Promis
 export async function withCleanup<T>(
   setup: () => T | Promise<T>,
   cleanup: (data: T) => void | Promise<void>,
-  testFn: (data: T) => Promise<void> | void
+  testFunction: (data: T) => Promise<void> | void
 ): Promise<void> {
   const data = await setup();
   try {
-    await testFn(data);
+    await testFunction(data);
   } finally {
     await safeCleanup(() => cleanup(data));
   }
@@ -185,11 +195,11 @@ export async function collectAsyncIterator<T>(
  */
 export async function testAsyncGenerator<T>(
   generator: AsyncGenerator<T>,
-  testFn: (values: T[]) => void | Promise<void>
+  testFunction: (values: T[]) => void | Promise<void>
 ): Promise<void> {
   const values: T[] = [];
   for await (const value of generator) {
     values.push(value);
   }
-  await testFn(values);
+  await testFunction(values);
 }
