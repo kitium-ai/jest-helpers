@@ -8,6 +8,7 @@ export {
   assertExecutionTime,
   debounce,
   measureTime,
+  sleep,
   throttle,
   timeout,
   withTimeout,

@@ -1,6 +1,6 @@
 {
   "name": "@kitiumai/jest-helpers",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Jest unit and integration test helpers for enterprise testing - mocks, fixtures, matchers, and more",
   "type": "module",
   "sideEffects": false,
@@ -106,6 +106,7 @@
     "!dist/**/__tests__/**",
     "!dist/**/*.test.*",
     "!dist/**/*.spec.*",
+    "types.d.ts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -188,17 +189,17 @@
     "release": "pnpm version && pnpm install --lockfile-only"
   },
   "dependencies": {
-    "@kitiumai/logger": "^2.0.0"
+    "@kitiumai/logger": "^2.0.1",
+    "@kitiumai/test-core": "^2.0.1"
   },
   "peerDependencies": {
     "jest": "^29.0.0",
     "typescript": "^5.0.0"
   },
   "devDependencies": {
-    "@kitiumai/config": "^2.0.0",
-    "@kitiumai/lint": "^2.0.0",
+    "@kitiumai/config": "^2.0.1",
+    "@kitiumai/lint": "^2.0.1",
     "@kitiumai/scripts": "^1.0.0",
-    "@kitiumai/test-core": "^2.0.0",
     "@changesets/cli": "^2.27.1",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",

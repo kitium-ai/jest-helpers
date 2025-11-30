@@ -938,6 +938,64 @@ afterAll(test.setup.afterAll);
 const db = test.fixture('database');
 ```
 
+## Usage & Tree-Shaking
+
+This package is designed for optimal tree-shaking with granular subpath exports. Import only what you need:
+
+### Main Entry (Recommended)
+
+```typescript
+import { setupJest, createFixture } from '@kitiumai/jest-helpers';
+```
+
+### Granular Subpath Imports (Optimal Tree-Shaking)
+
+```typescript
+// Import specific utilities
+import { createMock } from '@kitiumai/jest-helpers/mocks';
+import { FixtureManager } from '@kitiumai/jest-helpers/fixtures';
+import { HttpMockRegistry } from '@kitiumai/jest-helpers/http';
+import { runWithFakeTimers } from '@kitiumai/jest-helpers/timers';
+import { setupJest } from '@kitiumai/jest-helpers/setup';
+```
+
+### Available Subpath Exports
+
+- `@kitiumai/jest-helpers/mocks` - Mock creation and management
+- `@kitiumai/jest-helpers/fixtures` - Test fixture utilities
+- `@kitiumai/jest-helpers/matchers` - Custom Jest matchers
+- `@kitiumai/jest-helpers/database` - Database testing utilities
+- `@kitiumai/jest-helpers/http` - HTTP mocking and contract testing
+- `@kitiumai/jest-helpers/timers` - Timer management (fake timers, delays, timeouts)
+- `@kitiumai/jest-helpers/setup` - Main setup function and Jest wrapper
+- `@kitiumai/jest-helpers/integration` - Integration test environment
+- `@kitiumai/jest-helpers/console` - Console capture utilities
+- `@kitiumai/jest-helpers/async` - Async helpers (waitFor, delay, withTimeout)
+- `@kitiumai/jest-helpers/builders` - Test data builders
+- `@kitiumai/jest-helpers/namespaced` - Namespaced exports for avoiding conflicts
+- `@kitiumai/jest-helpers/strict-mode` - Strict mode presets and configuration
+- `@kitiumai/jest-helpers/auto-setup` - Auto-setup for jest.config.js
+- `@kitiumai/jest-helpers/auto-setup/unit` - Unit test auto-setup
+- `@kitiumai/jest-helpers/auto-setup/integration` - Integration test auto-setup
+- `@kitiumai/jest-helpers/auto-setup/e2e` - E2E test auto-setup
+- `@kitiumai/jest-helpers/auto-setup/contract` - Contract test auto-setup
+
+### Tree-Shaking Benefits
+
+Using granular imports reduces bundle size by only including what you use:
+
+```typescript
+// ❌ Imports everything (larger bundle)
+import { createMock, FixtureManager, HttpMockRegistry } from '@kitiumai/jest-helpers';
+
+// ✅ Imports only what's needed (optimal)
+import { createMock } from '@kitiumai/jest-helpers/mocks';
+import { FixtureManager } from '@kitiumai/jest-helpers/fixtures';
+import { HttpMockRegistry } from '@kitiumai/jest-helpers/http';
+```
+
+The package has `"sideEffects": false` configured, enabling aggressive tree-shaking by bundlers.
+
 ## TypeScript Support
 
 Full TypeScript support with comprehensive type definitions.

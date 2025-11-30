@@ -3,7 +3,7 @@
  * Provides utilities for setup, teardown, and testing integrated components
  */
 
-import { waitFor } from '@kitiumai/test-core';
+import { retry, waitFor, withTimeout as testCoreWithTimeout } from '@kitiumai/test-core';
 
 /**
  * Integration test context - manages test state and resources
@@ -351,10 +351,12 @@ export async function runTestsInParallel<T>(
   const { concurrency = 5 } = options;
   const results: T[] = [];
   const executing: Array<Promise<T>> = [];
+  let index = 0;
 
-  for (let index = 0; index < tests.length; index++) {
-    const test = tests[index];
-    const promise = Promise.resolve().then(test);
+  for (const test of tests) {
+    const promise = (async () => {
+      return await test();
+    })();
 
     results[index] = await promise;
 
@@ -367,6 +369,7 @@ export async function runTestsInParallel<T>(
     }
 
     executing.push(promise);
+    index++;
   }
 
   await Promise.all(executing);
@@ -388,6 +391,7 @@ export async function runTestsSequentially<T>(tests: Array<() => Promise<T>>): P
 
 /**
  * Test retry helper with reporting
+ * Uses retry from @kitiumai/test-core with enhanced reporting
  */
 export async function retryTestWithReport<T>(
   testFunction: () => Promise<T>,
@@ -400,50 +404,35 @@ export async function retryTestWithReport<T>(
   const { maxAttempts = 3, delayMs = 100, onRetry } = options;
 
   let attempt = 0;
+
   return retry(
     async () => {
       attempt++;
       try {
         return await testFunction();
       } catch (error) {
+        const errorObject = error instanceof Error ? error : new Error(String(error));
         if (attempt < maxAttempts) {
-          const errorObject = error instanceof Error ? error : new Error(String(error));
           console.log(`Retry attempt ${attempt}/${maxAttempts}: ${errorObject.message}`);
           onRetry?.(attempt, errorObject);
         }
-        throw error;
+        throw errorObject;
       }
     },
     {
       maxAttempts,
       delay: delayMs,
+      backoff: 1, // No backoff for test retries
     }
   );
 }
 
 /**
  * Timeout helper for test execution
+ * Re-exports withTimeout from @kitiumai/test-core
  */
 export async function withTimeout<T>(function_: () => Promise<T>, timeoutMs: number): Promise<T> {
-  let completed = false;
-  let result: T;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      if (!completed) {
-        reject(new Error(`Operation timed out after ${timeoutMs}ms`));
-      }
-    }, timeoutMs);
-  });
-
-  try {
-    result = await Promise.race([function_(), timeoutPromise]);
-    completed = true;
-    return result;
-  } catch (e) {
-    completed = true;
-    throw e;
-  }
+  return testCoreWithTimeout(function_(), timeoutMs);
 }
 
 /**

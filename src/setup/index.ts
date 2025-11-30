@@ -140,8 +140,9 @@ export class TestEnvironment {
    */
   private setupErrorHandlers(): void {
     // Use @kitiumai/logger for error logging
-    import('@kitiumai/logger')
-      .then(({ getLogger }) => {
+    void (async () => {
+      try {
+        const { getLogger } = await import('@kitiumai/logger');
         const logger = getLogger();
 
         process.on('unhandledRejection', (reason) => {
@@ -159,8 +160,7 @@ export class TestEnvironment {
             error instanceof Error ? error : new Error(String(error))
           );
         });
-      })
-      .catch(() => {
+      } catch {
         // Fallback to console if logger fails to load
         process.on('unhandledRejection', (reason) => {
           console.error('Unhandled Promise Rejection:', reason);
@@ -169,7 +169,8 @@ export class TestEnvironment {
         process.on('uncaughtException', (error) => {
           console.error('Uncaught Exception:', error);
         });
-      });
+      }
+    })();
   }
 
   /**

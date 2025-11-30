@@ -6,7 +6,6 @@
 // Re-export from test-core
 import { retry, sleep, waitFor, waitForValue } from '@kitiumai/test-core';
 
-
 export { retry, sleep, waitFor, waitForValue };
 
 /**
@@ -122,7 +121,7 @@ export async function waitForPromise<T>(
 ): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) => {
+    new Promise<T>((_resolve, reject) => {
       setTimeout(() => {
         reject(new Error(message ?? `Promise timed out after ${timeoutMs}ms`));
       }, timeoutMs);

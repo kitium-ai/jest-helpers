@@ -10,7 +10,7 @@ export default [
   ...eslintTypeScriptConfig,
   eslintJestConfig,
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.cjs'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.cjs', '*.d.ts'],
   },
   {
     name: 'console-utilities',
@@ -55,7 +55,8 @@ export default [
           selector: 'variable',
           format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
           filter: {
-            regex: '^(result|hasResult|conditionResult|sourceValue|targetValue|error_|errorObject)$',
+            regex:
+              '^(result|hasResult|conditionResult|sourceValue|targetValue|error_|errorObject)$',
             match: true,
           },
         },

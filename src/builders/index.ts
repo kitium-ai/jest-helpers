@@ -5,10 +5,14 @@
 
 // Re-export from test-core for convenience
 export {
+  Builder,
+  createBuilder,
   createFactory,
   createFactoryWithBuilder,
   DataGenerators,
   Factories,
+  Factory,
+  Sequence,
 } from '@kitiumai/test-core';
 
 /**
