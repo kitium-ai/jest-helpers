@@ -3,7 +3,9 @@
  * Enterprise-grade GraphQL testing helpers
  */
 
-import { contextManager, getLogger } from '@kitiumai/logger';
+import { contextManager } from '@kitiumai/logger';
+
+import { getInternalLogger } from '../internal-logger.js';
 
 export type GraphQLRequest = {
   query: string;
@@ -36,7 +38,7 @@ export type GraphQLMock = {
 export class GraphQLMockRegistry {
   private mocks: GraphQLMock[] = [];
   private requests: Array<GraphQLRequest & { timestamp: number; traceId?: string }> = [];
-  private readonly logger = getLogger();
+  private readonly logger = getInternalLogger();
 
   /**
    * Register a GraphQL mock

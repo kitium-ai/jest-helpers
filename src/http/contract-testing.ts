@@ -3,9 +3,10 @@
  * Request recording and replay capabilities
  */
 
-import { contextManager, getLogger } from '@kitiumai/logger';
+import { contextManager } from '@kitiumai/logger';
 
 import type { HttpRequest, HttpResponse } from './index';
+import { getInternalLogger } from '../internal-logger.js';
 
 export type RecordedRequest = {
   timestamp: number;
@@ -30,7 +31,7 @@ export type ContractSpec = {
  */
 export class RequestRecorder {
   private requests: RecordedRequest[] = [];
-  private readonly logger = getLogger();
+  private readonly logger = getInternalLogger();
 
   /**
    * Record a request

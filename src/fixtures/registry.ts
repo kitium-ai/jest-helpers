@@ -3,9 +3,10 @@
  * Ensures fixtures are always cleaned up, even if tests fail
  */
 
-import { contextManager, getLogger } from '@kitiumai/logger';
+import { contextManager } from '@kitiumai/logger';
 
 import type { Fixture } from './index';
+import { getInternalLogger } from '../internal-logger.js';
 
 type RegisteredFixture<T> = {
   fixture: Fixture<T>;
@@ -21,7 +22,7 @@ type RegisteredFixture<T> = {
 export class AutomaticFixtureRegistry {
   private readonly fixtures: Map<string, RegisteredFixture<unknown>> = new Map();
   private cleanupOrder: string[] = [];
-  private readonly logger = getLogger();
+  private readonly logger = getInternalLogger();
 
   /**
    * Register a fixture with automatic cleanup

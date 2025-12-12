@@ -7,7 +7,9 @@ import {
   type ConsoleCapture,
   type ConsoleCaptureEntry,
   contextManager,
+  createLogger,
   getLogger,
+  type ILogger,
   type LogContext,
 } from '@kitiumai/logger';
 
@@ -133,9 +135,14 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
     value: number,
     labels?: Record<string, string>
   ) {
-    // This is a placeholder - actual implementation would query metrics registry
-    // For now, we'll check if the logger has metrics support
-    const logger = getLogger();
+    // This is a placeholder - actual implementation would query metrics registry.
+    // Prefer global logger if initialized, else fallback to a dev logger.
+    let logger: ILogger;
+    try {
+      logger = getLogger();
+    } catch {
+      logger = createLogger('development', { serviceName: 'jest-helpers' });
+    }
     const hasMetrics = 'metrics' in logger;
 
     return {

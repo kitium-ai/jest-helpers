@@ -139,8 +139,9 @@ export async function safeCleanup(cleanupFunction: () => void | Promise<void>): 
     // Ignore cleanup errors
     if (process.env['DEBUG']) {
       // Use @kitiumai/logger for debug logging
-      const { getLogger } = await import('@kitiumai/logger');
-      getLogger().debug('Cleanup error (ignored)', {
+      const { createLogger } = await import('@kitiumai/logger');
+      const logger = createLogger('development', { serviceName: 'jest-helpers' });
+      logger.debug('Cleanup error (ignored)', {
         error: error instanceof Error ? error.message : String(error),
       });
     }

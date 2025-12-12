@@ -3,13 +3,16 @@
  * Enforces best practices and prevents common mistakes
  */
 
-import { contextManager, LoggerBuilder, LogLevel } from '@kitiumai/logger';
+import { contextManager, LogLevel, type ILogger } from '@kitiumai/logger';
 
 import { setupContextAwareConsole } from '../console/context-aware';
 import { createAutomaticFixtureHooks, type Fixture } from '../fixtures';
 import { getRequestRecorder } from '../http/contract-testing';
 import { setupCustomMatchers } from '../matchers';
 import { setupObservabilityMatchers } from '../matchers/observability';
+import { extractConsoleEntries } from './internal/console-entries.js';
+import { createDevTestLogger } from './internal/dev-logger.js';
+import { setupErrorHandlers } from './internal/error-handlers.js';
 
 export type StrictModeOptions = {
   /**
@@ -110,7 +113,11 @@ export function createStrictModePreset(options: StrictModeOptions = {}): {
   const requestRecorder = enableRequestRecording ? getRequestRecorder() : null;
 
   // Setup error handlers
-  setupErrorHandlers(failOnUnhandledRejection, failOnConsoleError, logger);
+  setupErrorHandlers({
+    logger,
+    failOnUnhandledRejection,
+    failOnConsoleError,
+  });
 
   // Set test timeout
   jest.setTimeout(timeout);
@@ -240,7 +247,7 @@ type LifecycleGuards = {
 
 class StrictModeLifecycle {
   constructor(
-    private readonly logger: ReturnType<typeof LoggerBuilder.console>,
+    private readonly logger: ILogger,
     private readonly fixtureHooks: ReturnType<typeof createAutomaticFixtureHooks> | null,
     private readonly consoleHooks: ReturnType<typeof setupContextAwareConsole> | null,
     private readonly requestRecorder: ReturnType<typeof getRequestRecorder> | null,
@@ -371,8 +378,8 @@ class StrictModeLifecycle {
   }
 }
 
-function setupLogger(logLevel: LogLevel): ReturnType<typeof LoggerBuilder.console> {
-  return LoggerBuilder.console(logLevel);
+function setupLogger(logLevel: LogLevel): ILogger {
+  return createDevTestLogger(logLevel);
 }
 
 function setupMatchers(enableObservabilityMatchers: boolean): void {
@@ -402,47 +409,4 @@ function setupFixtures(
     return createAutomaticFixtureHooks(fixtures);
   }
   return null;
-}
-
-function setupErrorHandlers(
-  failOnUnhandledRejection: boolean,
-  failOnConsoleError: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  logger: any
-): void {
-  if (failOnUnhandledRejection) {
-    process.on('unhandledRejection', (reason) => {
-      logger.error('Unhandled Promise Rejection in test', { reason: String(reason) });
-      throw reason;
-    });
-  }
-
-  if (failOnConsoleError) {
-    const originalError = console.error;
-    console.error = (...args: unknown[]) => {
-      logger.error('Console error in test', { message: args.map(String).join(' ') });
-      originalError(...args);
-      throw new Error('Console error detected in test');
-    };
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractConsoleEntries(capture: any): Array<Record<string, unknown>> {
-  if (!capture) {
-    return [];
-  }
-
-  if (Array.isArray(capture.entries)) {
-    return capture.entries as Array<Record<string, unknown>>;
-  }
-
-  if (typeof capture.getEntries === 'function') {
-    const entries = capture.getEntries();
-    if (Array.isArray(entries)) {
-      return entries as Array<Record<string, unknown>>;
-    }
-  }
-
-  return [];
 }

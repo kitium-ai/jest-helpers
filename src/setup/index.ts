@@ -3,6 +3,8 @@
  */
 
 import { setupCustomMatchers } from '../matchers';
+import { createDevTestLogger } from './internal/dev-logger.js';
+import { setupErrorHandlers as setupSharedErrorHandlers } from './internal/error-handlers.js';
 
 export type TestSetupOptions = {
   enableCustomMatchers?: boolean;
@@ -142,23 +144,15 @@ export class TestEnvironment {
     // Use @kitiumai/logger for error logging
     void (async () => {
       try {
-        const { getLogger } = await import('@kitiumai/logger');
-        const logger = getLogger();
-
-        process.on('unhandledRejection', (reason) => {
-          logger.error(
-            'Unhandled Promise Rejection',
-            { reason: reason instanceof Error ? reason.message : String(reason) },
-            reason instanceof Error ? reason : undefined
-          );
+        const logger = createDevTestLogger();
+        setupSharedErrorHandlers({
+          logger,
+          failOnUnhandledRejection: true,
+          failOnConsoleError: false,
         });
 
         process.on('uncaughtException', (error) => {
-          logger.error(
-            'Uncaught Exception',
-            {},
-            error instanceof Error ? error : new Error(String(error))
-          );
+          logger.error('Uncaught Exception', {}, error instanceof Error ? error : new Error(String(error)));
         });
       } catch {
         // Fallback to console if logger fails to load
