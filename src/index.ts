@@ -83,6 +83,35 @@ export * from './http/graphql';
 export * from './matchers/observability';
 export * from './setup/strict-mode';
 
+// NEW ENTERPRISE FEATURES (Phase 1-3 Implementation)
+
+// Fluent assertions API
+export * from './matchers/fluent';
+
+// Property-based testing
+export type { Generator } from './property-testing';
+export { propertyTest, generators as propertyGenerators } from './property-testing';
+
+// Test data factories  
+export type { Factory, FactoryDefinition, FactoryOptions } from './factories';
+export { BaseFactory, createTestDataBuilder, generators as factoryGenerators } from './factories';
+
+// Enhanced error messages and debugging
+export * from './enhanced-errors';
+
+// Advanced mocking capabilities
+export type { ArgumentCaptor } from './mocks';
+export { VerificationMode, createAdvancedMock, createSpy, MockSequencer, createSequencedMock } from './mocks';
+
+// Visual and accessibility testing
+export * from './visual-accessibility';
+
+// Parameterized testing
+export * from './parameterized-testing';
+
+// Multi-framework consistency
+export * from './universal-testing';
+
 // MAIN ENTRY POINT - Simple wrapper API (recommended)
 export type { JestPreset, JestWrapper } from './setup/jest-wrapper';
 export { jestHelpers, setupJest } from './setup/jest-wrapper';

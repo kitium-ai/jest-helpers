@@ -97,6 +97,34 @@
     "./auto-setup/contract": {
       "types": "./dist/setup/auto-setup.contract.d.ts",
       "default": "./dist/setup/auto-setup.contract.js"
+    },
+    "./fluent": {
+      "types": "./dist/matchers/fluent.d.ts",
+      "default": "./dist/matchers/fluent.js"
+    },
+    "./property-testing": {
+      "types": "./dist/property-testing.d.ts",
+      "default": "./dist/property-testing.js"
+    },
+    "./factories": {
+      "types": "./dist/factories.d.ts",
+      "default": "./dist/factories.js"
+    },
+    "./enhanced-errors": {
+      "types": "./dist/enhanced-errors.d.ts",
+      "default": "./dist/enhanced-errors.js"
+    },
+    "./visual-accessibility": {
+      "types": "./dist/visual-accessibility.d.ts",
+      "default": "./dist/visual-accessibility.js"
+    },
+    "./parameterized-testing": {
+      "types": "./dist/parameterized-testing.d.ts",
+      "default": "./dist/parameterized-testing.js"
+    },
+    "./universal-testing": {
+      "types": "./dist/universal-testing.d.ts",
+      "default": "./dist/universal-testing.js"
     }
   },
   "files": [
@@ -197,14 +225,15 @@
     "typescript": "^5.6.0"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.1",
     "@kitiumai/config": "^3.1.4",
     "@kitiumai/lint": "^3.0.0",
     "@kitiumai/scripts": "^2.0.0",
-    "@changesets/cli": "^2.27.1",
     "@types/jest": "^29.5.0",
     "@types/node": "^24.10.1",
     "eslint": "^9.15.0",
     "jest": "^29.5.0",
+    "jest-diff": "^30.2.0",
     "prettier": "^3.6.2",
     "rimraf": "^5.0.5",
     "ts-jest": "^29.1.0",

@@ -15,6 +15,7 @@ declare global {
       toContainObject(object: unknown): R;
       toHaveBeenCalledWithObject(object: unknown): R;
       toMatchObject(expected: unknown): R;
+      toSatisfyFluentAssertion(): R;
     }
   }
 }
@@ -152,6 +153,17 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
           : `expected object to match ${JSON.stringify(expected)}`,
     };
   },
+
+  /**
+   * Check if fluent assertion passes
+   */
+  toSatisfyFluentAssertion(received: unknown, assertionFn: (value: any) => { result: { pass: boolean; message: string } }) {
+    const assertion = assertionFn(received);
+    return {
+      pass: assertion.result.pass,
+      message: () => assertion.result.message,
+    };
+  },
 };
 
 /**
@@ -163,3 +175,6 @@ export function setupCustomMatchers(): void {
 
 // Re-export observability matchers
 export * from './observability';
+
+// Re-export fluent assertions
+export * from './fluent';
