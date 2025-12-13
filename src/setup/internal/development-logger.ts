@@ -3,9 +3,8 @@
  * Keeps strict-mode / setup independent from global logger initialization.
  */
 
-import { createLogger, LogLevel, type ILogger } from '@kitiumai/logger';
+import { createLogger, type ILogger, LogLevel } from '@kitiumai/logger';
 
-export function createDevTestLogger(logLevel: LogLevel = LogLevel.INFO): ILogger {
+export function createDevelopmentTestLogger(logLevel: LogLevel = LogLevel.INFO): ILogger {
   return createLogger('development', { serviceName: 'jest-helpers', logLevel });
 }
-

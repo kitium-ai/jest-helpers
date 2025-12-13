@@ -13,24 +13,23 @@
  * ```
  */
 
-import type * as AsyncModule from '../async';
-import type { setupContextAwareConsole } from '../console/context-aware';
-import type * as DatabaseModule from '../database';
-import type * as FixturesModule from '../fixtures';
-import type * as HttpModule from '../http';
 import {
   HttpMockRegistry,
   type HttpRequest,
   type HttpResponse,
   type MockHttpHandler,
 } from '../http';
-import type { getRequestRecorder } from '../http/contract-testing';
-import { type ContractSpec } from '../http/contract-testing';
+import { delay, getTimerManager, runWithFakeTimers } from '../timers';
+import { type StrictModeOptions, StrictModePresets } from './strict-mode';
+
+import type * as AsyncModule from '../async';
+import type { setupContextAwareConsole } from '../console/context-aware';
+import type * as DatabaseModule from '../database';
+import type * as FixturesModule from '../fixtures';
+import type { ContractSpec, getRequestRecorder } from '../http/contract-testing';
 import type * as MatchersModule from '../matchers';
 import type * as MocksModule from '../mocks';
 import type * as TimersModule from '../timers';
-import { delay, getTimerManager, runWithFakeTimers } from '../timers';
-import { type StrictModeOptions, StrictModePresets } from './strict-mode';
 
 export type JestPreset = 'unit' | 'integration' | 'e2e' | 'contract';
 
@@ -83,7 +82,12 @@ export type JestWrapper = {
     mock: typeof MocksModule;
     fixture: typeof FixturesModule;
     matcher: typeof MatchersModule;
-    http: typeof HttpModule;
+    http: {
+      HttpMockRegistry: typeof HttpMockRegistry;
+      HttpRequest: HttpRequest;
+      HttpResponse: HttpResponse;
+      MockHttpHandler: MockHttpHandler;
+    };
     async: typeof AsyncModule;
     timer: typeof TimersModule;
     database: typeof DatabaseModule;
@@ -184,19 +188,7 @@ export function setupJest(
     /**
      * Convenience wrapper around timer policies per test
      */
-    withTimers: async <T>(
-      testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
-      mode: 'fake' | 'real' = 'fake'
-    ): Promise<T> => {
-      if (mode === 'real') {
-        const timers = getTimerManager();
-        jest.useRealTimers();
-        return Promise.resolve(testFunction(timers));
-      }
-
-      return runWithFakeTimers(testFunction);
-      return runWithFakeTimers(testFunction);
-    },
+    withTimers: (testFunction, mode = 'fake') => withTimersInternal(testFunction, mode),
 
     /**
      * Golden-path HTTP mocking + recording facade
@@ -214,36 +206,64 @@ export function setupJest(
     /**
      * Access to underlying utilities (for advanced use cases)
      */
-    utils: {
-      // Lazy import to avoid circular dependencies
-      get mock() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../mocks');
-      },
-      get fixture() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../fixtures');
-      },
-      get matcher() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../matchers');
-      },
-      get http() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../http');
-      },
-      get async() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../async');
-      },
-      get timer() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../timers');
-      },
-      get database() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('../database');
-      },
+    utils: createUtilsProxy(),
+  };
+}
+function withTimersInternal<T>(
+  testFunction: (timers: TimersModule.TimerManager) => Promise<T> | T,
+  mode: 'fake' | 'real'
+): Promise<T> {
+  if (mode === 'real') {
+    const timers = getTimerManager();
+    jest.useRealTimers();
+    return Promise.resolve(testFunction(timers));
+  }
+  return runWithFakeTimers(testFunction);
+}
+
+function createUtilsProxy(): {
+  mock: typeof MocksModule;
+  fixture: typeof FixturesModule;
+  matcher: typeof MatchersModule;
+  http: {
+    HttpMockRegistry: typeof HttpMockRegistry;
+    HttpRequest: HttpRequest;
+    HttpResponse: HttpResponse;
+    MockHttpHandler: MockHttpHandler;
+  };
+  async: typeof AsyncModule;
+  timer: typeof TimersModule;
+  database: typeof DatabaseModule;
+} {
+  return {
+    // Lazy import to avoid circular dependencies
+    get mock() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../mocks');
+    },
+    get fixture() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../fixtures');
+    },
+    get matcher() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../matchers');
+    },
+    get http() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../http');
+    },
+    get async() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../async');
+    },
+    get timer() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../timers');
+    },
+    get database() {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../database');
     },
   };
 }
@@ -290,7 +310,10 @@ function createHttpClientFacade(recorder: ReturnType<typeof getRequestRecorder> 
   request: (request: HttpRequest) => Promise<HttpResponse>;
   record: (request: HttpRequest) => void;
   requests: () => HttpRequest[];
-  assertContract: (spec: ContractSpec) => { passed: boolean; failures: string[] };
+  assertContract: (spec: ContractSpec) => {
+    passed: boolean;
+    failures: string[];
+  };
   reset: () => void;
 } {
   const registry = new HttpMockRegistry();
@@ -298,26 +321,7 @@ function createHttpClientFacade(recorder: ReturnType<typeof getRequestRecorder> 
   return {
     registry,
     mock: registry,
-    async request(request: HttpRequest): Promise<HttpResponse> {
-      const handler = registry.getHandler(request as HttpRequest & { handler?: MockHttpHandler });
-      if (!handler) {
-        throw new Error(`No HTTP mock registered for ${request.method} ${request.url}`);
-      }
-
-      const response =
-        typeof handler.response === 'function'
-          ? (handler.response as () => HttpResponse)()
-          : handler.response;
-
-      registry.recordRequest(request);
-      recorder?.record(request, response, handler.delay);
-
-      if (handler.delay) {
-        await delay(handler.delay);
-      }
-
-      return response;
-    },
+    request: (request: HttpRequest) => executeMockedRequest(registry, recorder, request),
     record(request: HttpRequest) {
       registry.recordRequest(request);
     },
@@ -337,4 +341,29 @@ function createHttpClientFacade(recorder: ReturnType<typeof getRequestRecorder> 
       recorder?.clear();
     },
   };
+}
+
+async function executeMockedRequest(
+  registry: HttpMockRegistry,
+  recorder: ReturnType<typeof getRequestRecorder> | null,
+  request: HttpRequest
+): Promise<HttpResponse> {
+  const handler = registry.getHandler(request as HttpRequest & { handler?: MockHttpHandler });
+  if (!handler) {
+    throw new Error(`No HTTP mock registered for ${request.method} ${request.url}`);
+  }
+
+  const response =
+    typeof handler.response === 'function'
+      ? (handler.response as () => HttpResponse)()
+      : handler.response;
+
+  registry.recordRequest(request);
+  recorder?.record(request, response, handler.delay);
+
+  if (handler.delay) {
+    await delay(handler.delay);
+  }
+
+  return response;
 }

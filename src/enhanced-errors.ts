@@ -14,8 +14,8 @@ export type ErrorContext = {
 
 export type DiffOptions = {
   contextLines?: number;
-  expand?: boolean;
-  includeChangeCounts?: boolean;
+  shouldExpand?: boolean;
+  shouldIncludeChangeCounts?: boolean;
 };
 
 export type AssertionErrorDetails = {
@@ -51,7 +51,7 @@ export class EnhancedAssertionError extends Error {
 
     if (this.details.suggestions && this.details.suggestions.length > 0) {
       message += '\n\nSuggestions:';
-      this.details.suggestions.forEach(suggestion => {
+      this.details.suggestions.forEach((suggestion) => {
         message += `\n  • ${suggestion}`;
       });
     }
@@ -81,16 +81,12 @@ export class DiffUtils {
    * Create a diff between two values
    */
   static createDiff(actual: unknown, expected: unknown, options: DiffOptions = {}): string | null {
-    const {
-      contextLines = 3,
-      expand = false,
-      includeChangeCounts = true,
-    } = options;
+    const { contextLines = 3, shouldExpand = false, shouldIncludeChangeCounts = true } = options;
 
     return jestDiff(expected, actual, {
       contextLines,
-      expand,
-      includeChangeCounts,
+      expand: shouldExpand,
+      includeChangeCounts: shouldIncludeChangeCounts,
       aAnnotation: 'Expected',
       bAnnotation: 'Actual',
     });
@@ -99,7 +95,11 @@ export class DiffUtils {
   /**
    * Create a diff for objects with better formatting
    */
-  static createObjectDiff(actual: unknown, expected: unknown, options: DiffOptions = {}): string | null {
+  static createObjectDiff(
+    actual: unknown,
+    expected: unknown,
+    options: DiffOptions = {}
+  ): string | null {
     if (typeof actual === 'object' && typeof expected === 'object') {
       return this.createDiff(actual, expected, options);
     }
@@ -109,7 +109,11 @@ export class DiffUtils {
   /**
    * Create a diff for arrays
    */
-  static createArrayDiff(actual: unknown[], expected: unknown[], options: DiffOptions = {}): string | null {
+  static createArrayDiff(
+    actual: unknown[],
+    expected: unknown[],
+    options: DiffOptions = {}
+  ): string | null {
     if (Array.isArray(actual) && Array.isArray(expected)) {
       return this.createDiff(actual, expected, options);
     }
@@ -131,7 +135,7 @@ export class DiffUtils {
  * Context-aware error builder
  */
 export class ErrorBuilder {
-  private details: Partial<AssertionErrorDetails> = {};
+  private readonly details: Partial<AssertionErrorDetails> = {};
   private context: ErrorContext = {};
 
   /**
@@ -194,10 +198,12 @@ export class ErrorBuilder {
     const details: AssertionErrorDetails = {
       actual: this.details.actual,
       expected: this.details.expected,
-      message: this.details.message || 'Assertion failed',
+      message: this.details.message ?? 'Assertion failed',
       ...(this.details.diff !== undefined && { diff: this.details.diff }),
       ...(Object.keys(this.context).length > 0 && { context: this.context }),
-      ...(this.details.suggestions && { suggestions: this.details.suggestions }),
+      ...(this.details.suggestions && {
+        suggestions: this.details.suggestions,
+      }),
     };
 
     return new EnhancedAssertionError(details);
@@ -215,7 +221,7 @@ export class ErrorBuilder {
  * Assertion helpers with enhanced error messages
  */
 export class AssertionHelpers {
-  private context: ErrorContext;
+  private readonly context: ErrorContext;
 
   constructor(context: ErrorContext = {}) {
     this.context = context;
@@ -229,7 +235,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(actual)
         .expected(expected)
-        .message(message || `Expected ${expected} but got ${actual}`)
+        .message(message ?? `Expected ${expected} but got ${actual}`)
         .withContext(this.context)
         .withDiff()
         .withSuggestions([
@@ -245,14 +251,14 @@ export class AssertionHelpers {
    * Assert deep equality for objects and arrays
    */
   deepEqual<T>(actual: T, expected: T, message?: string): void {
-    const actualStr = JSON.stringify(actual, null, 2);
-    const expectedStr = JSON.stringify(expected, null, 2);
+    const actualString = JSON.stringify(actual, null, 2);
+    const expectedString = JSON.stringify(expected, null, 2);
 
-    if (actualStr !== expectedStr) {
+    if (actualString !== expectedString) {
       new ErrorBuilder()
         .actual(actual)
         .expected(expected)
-        .message(message || 'Objects are not deeply equal')
+        .message(message ?? 'Objects are not deeply equal')
         .withContext(this.context)
         .withDiff()
         .withSuggestions([
@@ -272,7 +278,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(value)
         .expected('truthy value')
-        .message(message || `Expected truthy value but got ${value}`)
+        .message(message ?? `Expected truthy value but got ${value}`)
         .withContext(this.context)
         .withSuggestions([
           'Check if the value is null or undefined',
@@ -291,7 +297,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(array)
         .expected('array')
-        .message(message || 'Expected an array')
+        .message(message ?? 'Expected an array')
         .withContext(this.context)
         .throw();
     }
@@ -300,7 +306,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(array)
         .expected(item)
-        .message(message || `Array does not contain ${item}`)
+        .message(message ?? `Array does not contain ${item}`)
         .withContext(this.context)
         .withDiff()
         .withSuggestions([
@@ -320,7 +326,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(typeof string)
         .expected('string')
-        .message(message || 'Expected a string')
+        .message(message ?? 'Expected a string')
         .withContext(this.context)
         .throw();
     }
@@ -329,7 +335,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(string)
         .expected(pattern)
-        .message(message || `String does not match pattern ${pattern}`)
+        .message(message ?? `String does not match pattern ${pattern}`)
         .withContext(this.context)
         .withSuggestions([
           'Check the regular expression pattern',
@@ -348,7 +354,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(object)
         .expected('object')
-        .message(message || 'Expected an object')
+        .message(message ?? 'Expected an object')
         .withContext(this.context)
         .throw();
     }
@@ -357,7 +363,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(Object.keys(object))
         .expected(property)
-        .message(message || `Object does not have property "${property}"`)
+        .message(message ?? `Object does not have property "${property}"`)
         .withContext(this.context)
         .withSuggestions([
           'Check property name spelling',
@@ -376,7 +382,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(typeof value)
         .expected('number')
-        .message(message || 'Expected a number')
+        .message(message ?? 'Expected a number')
         .withContext(this.context)
         .throw();
     }
@@ -385,7 +391,7 @@ export class AssertionHelpers {
       new ErrorBuilder()
         .actual(value)
         .expected(`[${min}, ${max}]`)
-        .message(message || `Value ${value} is not in range [${min}, ${max}]`)
+        .message(message ?? `Value ${value} is not in range [${min}, ${max}]`)
         .withContext(this.context)
         .withSuggestions([
           'Check boundary conditions',
@@ -435,63 +441,78 @@ export class TestContextManager {
 /**
  * Jest integration for enhanced assertions
  */
+function handleAssertionError(error: unknown): never {
+  if (error instanceof EnhancedAssertionError) {
+    throw new Error(error.getFormattedMessage());
+  }
+  throw error;
+}
+
+function createAssertionMethod(
+  assertions: AssertionHelpers,
+  methodName: string,
+  actual: unknown,
+  ...args: unknown[]
+): () => void {
+  return () => {
+    try {
+      const method = (
+        assertions as unknown as Record<string, ((...args: unknown[]) => unknown) | undefined>
+      )[methodName];
+      method?.(actual, ...args);
+    } catch (error) {
+      handleAssertionError(error);
+    }
+  };
+}
+
+function createEnhancedMethods(
+  assertions: AssertionHelpers,
+  actual: unknown
+): {
+  toEqual: (expected: unknown) => void;
+  toBe: (expected: unknown) => void;
+  toContain: (item: unknown) => void;
+  toMatch: (pattern: RegExp) => void;
+} {
+  return {
+    toEqual: createAssertionMethod(assertions, 'equal', actual),
+    toBe: createAssertionMethod(assertions, 'equal', actual),
+    toContain: createAssertionMethod(assertions, 'contains', actual),
+    toMatch: createAssertionMethod(assertions, 'matches', actual),
+  };
+}
+
+function createEnhancedExpectObject(
+  originalExpect: unknown,
+  actual: unknown
+): {
+  toEqual: (expected: unknown) => void;
+  toBe: (expected: unknown) => void;
+  toContain: (item: unknown) => void;
+  toMatch: (pattern: RegExp) => void;
+} {
+  const assertions = TestContextManager.createAssertions();
+  const enhancedMethods = createEnhancedMethods(assertions, actual);
+
+  return {
+    ...(originalExpect as (value: unknown) => Record<string, unknown>)(actual),
+    ...enhancedMethods,
+  };
+}
+
 export function setupEnhancedAssertions(): void {
   // Override Jest's expect to use enhanced error messages
-  const originalExpect = (globalThis as any).expect;
+  const originalExpect = (globalThis as unknown as { expect?: unknown }).expect;
 
   if (originalExpect) {
-    const enhancedExpect = (actual: unknown) => {
-      const assertions = TestContextManager.createAssertions();
-
-      return {
-        ...originalExpect(actual),
-        toEqual: (expected: unknown) => {
-          try {
-            assertions.equal(actual, expected);
-          } catch (error) {
-            if (error instanceof EnhancedAssertionError) {
-              throw new Error(error.getFormattedMessage());
-            }
-            throw error;
-          }
-        },
-        toBe: (expected: unknown) => {
-          try {
-            assertions.equal(actual, expected);
-          } catch (error) {
-            if (error instanceof EnhancedAssertionError) {
-              throw new Error(error.getFormattedMessage());
-            }
-            throw error;
-          }
-        },
-        toContain: (item: unknown) => {
-          try {
-            assertions.contains(actual as unknown[], item);
-          } catch (error) {
-            if (error instanceof EnhancedAssertionError) {
-              throw new Error(error.getFormattedMessage());
-            }
-            throw error;
-          }
-        },
-        toMatch: (pattern: RegExp) => {
-          try {
-            assertions.matches(actual as string, pattern);
-          } catch (error) {
-            if (error instanceof EnhancedAssertionError) {
-              throw new Error(error.getFormattedMessage());
-            }
-            throw error;
-          }
-        },
-      };
-    };
+    const enhancedExpect = (actual: unknown): ReturnType<typeof createEnhancedExpectObject> =>
+      createEnhancedExpectObject(originalExpect, actual);
 
     // Copy properties from original expect
     Object.setPrototypeOf(enhancedExpect, originalExpect);
 
-    (globalThis as any).expect = enhancedExpect;
+    (globalThis as unknown as { expect: unknown }).expect = enhancedExpect;
   }
 }
 
@@ -500,12 +521,21 @@ export function setupEnhancedAssertions(): void {
  */
 export function setupTestContextHooks(): void {
   beforeEach(() => {
-    const testState = (globalThis as any).expect?.getState?.();
-    TestContextManager.setContext({
-      testName: testState?.currentTestName,
-      testFile: testState?.testPath,
+    const expectObject = (globalThis as unknown as { expect?: { getState?: () => unknown } })
+      .expect;
+    const testState = expectObject?.getState?.() as
+      | { currentTestName?: string; testPath?: string }
+      | undefined;
+    const context: ErrorContext = {
       timestamp: new Date(),
-    });
+    };
+    if (testState?.currentTestName) {
+      context.testName = testState.currentTestName;
+    }
+    if (testState?.testPath) {
+      context.testFile = testState.testPath;
+    }
+    TestContextManager.setContext(context);
   });
 
   afterEach(() => {

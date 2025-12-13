@@ -17,13 +17,21 @@ export const delay = sleep;
  * Compatibility wrapper for the legacy waitUntil helper using the new waitFor API
  * Note: Uses pollIntervalMs parameter (not interval) to match prior waitUntil signature
  */
-export async function waitUntil(
+export function waitUntil(
   condition: () => boolean | Promise<boolean>,
-  options: { timeoutMs?: number; pollIntervalMs?: number; timeoutMessage?: string } = {}
+  options: {
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+    timeoutMessage?: string;
+  } = {}
 ): Promise<void> {
   const { timeoutMs, pollIntervalMs, timeoutMessage } = options;
 
-  const waitForOptions: { timeout?: number; interval?: number; timeoutMessage?: string } = {};
+  const waitForOptions: {
+    timeout?: number;
+    interval?: number;
+    timeoutMessage?: string;
+  } = {};
   if (timeoutMs !== undefined) {
     waitForOptions.timeout = timeoutMs;
   }
@@ -42,6 +50,20 @@ export const waitForCondition = waitUntil;
 /**
  * Consume an async iterator/stream and collect all values
  */
+function checkTimeout(startTime: number, timeout: number): void {
+  if (Date.now() - startTime > timeout) {
+    throw new Error(`Stream consumption timed out after ${timeout}ms`);
+  }
+}
+
+function shouldCollectValue<T>(value: T, filter?: (value: T) => boolean): boolean {
+  return !filter || filter(value);
+}
+
+function hasReachedLimit(resultsLength: number, limit?: number): boolean {
+  return limit !== undefined && resultsLength >= limit;
+}
+
 export async function consumeStream<T>(
   stream: AsyncIterable<T>,
   options: {
@@ -56,15 +78,13 @@ export async function consumeStream<T>(
 
   try {
     for await (const value of stream) {
-      if (Date.now() - startTime > timeout) {
-        throw new Error(`Stream consumption timed out after ${timeout}ms`);
-      }
+      checkTimeout(startTime, timeout);
 
-      if (!filter || filter(value)) {
+      if (shouldCollectValue(value, filter)) {
         results.push(value);
       }
 
-      if (limit && results.length >= limit) {
+      if (hasReachedLimit(results.length, limit)) {
         break;
       }
     }
@@ -114,7 +134,7 @@ export function createMockStream<T>(
 /**
  * Wait for a promise with timeout
  */
-export async function waitForPromise<T>(
+export function waitForPromise<T>(
   promise: Promise<T>,
   timeoutMs = 5000,
   message?: string
@@ -140,7 +160,9 @@ export async function safeCleanup(cleanupFunction: () => void | Promise<void>): 
     if (process.env['DEBUG']) {
       // Use @kitiumai/logger for debug logging
       const { createLogger } = await import('@kitiumai/logger');
-      const logger = createLogger('development', { serviceName: 'jest-helpers' });
+      const logger = createLogger('development', {
+        serviceName: 'jest-helpers',
+      });
       logger.debug('Cleanup error (ignored)', {
         error: error instanceof Error ? error.message : String(error),
       });

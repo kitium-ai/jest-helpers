@@ -2,8 +2,9 @@
  * Normalize console capture outputs.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extractConsoleEntries(capture: any): Array<Record<string, unknown>> {
+export function extractConsoleEntries(
+  capture: { entries?: unknown; getEntries?: () => unknown } | null | undefined
+): Array<Record<string, unknown>> {
   if (!capture) {
     return [];
   }
@@ -21,4 +22,3 @@ export function extractConsoleEntries(capture: any): Array<Record<string, unknow
 
   return [];
 }
-

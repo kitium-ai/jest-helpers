@@ -21,5 +21,4 @@
 import { registerAutoSetup } from './auto-setup.base';
 
 registerAutoSetup('unit');
-
-export default {};
+export const autoSetupUnit = {};

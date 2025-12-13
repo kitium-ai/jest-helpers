@@ -13,13 +13,13 @@ export type TestContext = {
 };
 
 export type TestRunner = {
-  describe: (name: string, fn: () => void) => void;
-  it: (name: string, fn: () => void | Promise<void>) => void;
-  beforeEach: (fn: () => void | Promise<void>) => void;
-  afterEach: (fn: () => void | Promise<void>) => void;
-  beforeAll: (fn: () => void | Promise<void>) => void;
-  afterAll: (fn: () => void | Promise<void>) => void;
-  expect: (value: unknown) => any;
+  describe: (name: string, function_: () => void) => void;
+  it: (name: string, function_: () => void | Promise<void>) => void;
+  beforeEach: (function_: () => void | Promise<void>) => void;
+  afterEach: (function_: () => void | Promise<void>) => void;
+  beforeAll: (function_: () => void | Promise<void>) => void;
+  afterAll: (function_: () => void | Promise<void>) => void;
+  expect: (value: unknown) => ReturnType<typeof expect>;
 };
 
 /**
@@ -33,17 +33,23 @@ export class FrameworkDetector {
     }
 
     // Check for Vitest
-    if (typeof globalThis !== 'undefined' && (globalThis as any).vitest) {
+    if (
+      typeof globalThis !== 'undefined' &&
+      (globalThis as unknown as { vitest?: unknown }).vitest
+    ) {
       return 'vitest';
     }
 
     // Check for global test functions
     if (typeof describe === 'function' && typeof it === 'function') {
       // Try to detect based on global properties
-      if (typeof expect !== 'undefined' && (expect as any).getState) {
+      if (typeof expect !== 'undefined' && (expect as unknown as { getState?: unknown }).getState) {
         return 'jest';
       }
-      if (typeof globalThis !== 'undefined' && (globalThis as any).__vitest__) {
+      if (
+        typeof globalThis !== 'undefined' &&
+        (globalThis as unknown as { __vitest__?: unknown }).__vitest__
+      ) {
         return 'vitest';
       }
     }
@@ -51,35 +57,49 @@ export class FrameworkDetector {
     return 'unknown';
   }
 
-  static getContext(): TestContext {
-    const framework = this.detect();
-    let version = 'unknown';
-    let environment: 'node' | 'browser' | 'unknown' = 'unknown';
-
+  private static detectFrameworkVersion(framework: TestFramework): string {
     try {
       switch (framework) {
         case 'jest':
-          version = (jest as any).getVersion?.() || 'unknown';
-          break;
+          return (jest as unknown as { getVersion?: () => string }).getVersion?.() ?? 'unknown';
         case 'vitest':
-          version = (globalThis as any).vitest?.version || 'unknown';
-          break;
+          return (
+            (globalThis as unknown as { vitest?: { version?: string } }).vitest?.version ??
+            'unknown'
+          );
+        case 'unknown':
+          return 'unknown';
+        default:
+          return 'unknown';
       }
     } catch {
       // Ignore version detection errors
+      return 'unknown';
     }
+  }
 
-    // Detect environment
+  private static detectEnvironment(): 'node' | 'browser' | 'unknown' {
     if (typeof globalThis !== 'undefined') {
-      const g = globalThis as any;
+      const g = globalThis as unknown as { window?: unknown; document?: unknown };
       if (typeof g.window !== 'undefined' && typeof g.document !== 'undefined') {
-        environment = 'browser';
+        return 'browser';
       }
     }
-    
-    if (typeof process !== 'undefined' && (process as any).versions?.node) {
-      environment = 'node';
+
+    if (
+      typeof process !== 'undefined' &&
+      (process as unknown as { versions?: { node?: string } }).versions?.node
+    ) {
+      return 'node';
     }
+
+    return 'unknown';
+  }
+
+  static getContext(): TestContext {
+    const framework = this.detect();
+    const version = this.detectFrameworkVersion(framework);
+    const environment = this.detectEnvironment();
 
     return {
       framework,
@@ -90,19 +110,21 @@ export class FrameworkDetector {
   }
 
   private static isCI(): boolean {
-    if (typeof process === 'undefined') return false;
-    
-    const env = process.env;
-    return !!(
-      env['CI'] ||
-      env['CONTINUOUS_INTEGRATION'] ||
-      env['BUILD_NUMBER'] ||
-      env['CIRCLECI'] ||
-      env['TRAVIS'] ||
-      env['GITHUB_ACTIONS'] ||
-      env['JENKINS_URL'] ||
-      env['BUILDKITE']
-    );
+    if (typeof process === 'undefined') {
+      return false;
+    }
+
+    const environment = process.env;
+    const marker =
+      environment['CI'] ??
+      environment['CONTINUOUS_INTEGRATION'] ??
+      environment['BUILD_NUMBER'] ??
+      environment['CIRCLECI'] ??
+      environment['TRAVIS'] ??
+      environment['GITHUB_ACTIONS'] ??
+      environment['JENKINS_URL'] ??
+      environment['BUILDKITE'];
+    return !!marker;
   }
 }
 
@@ -110,63 +132,80 @@ export class FrameworkDetector {
  * Universal test runner adapter
  */
 export class UniversalTestRunner implements TestRunner {
-  private framework: TestFramework;
+  private readonly framework: TestFramework;
 
   constructor() {
     this.framework = FrameworkDetector.detect();
   }
 
-  describe(name: string, fn: () => void): void {
+  describe(name: string, function_: () => void): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).describe(name, fn);
+      (
+        globalThis as unknown as { describe: (name: string, function__: () => void) => void }
+      ).describe(name, function_);
     } else {
-      describe(name, fn);
+      describe(name, function_);
     }
   }
 
-  it(name: string, fn: (() => void | Promise<void>)): void {
+  it(name: string, function_: () => void | Promise<void>): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).it(name, fn as any);
+      (
+        globalThis as unknown as {
+          it: (name: string, function__: () => void | Promise<void>) => void;
+        }
+      ).it(name, function_);
     } else {
-      it(name, fn as any);
+      // Cast to jest.ProvidesCallback to handle both sync and async functions
+      it(name, function_ as jest.ProvidesCallback);
     }
   }
 
-  beforeEach(fn: () => void | Promise<void>): void {
+  beforeEach(function_: () => void | Promise<void>): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).beforeEach(fn);
+      (
+        globalThis as unknown as { beforeEach: (function__: () => void | Promise<void>) => void }
+      ).beforeEach(function_);
     } else {
-      beforeEach(fn);
+      beforeEach(function_);
     }
   }
 
-  afterEach(fn: () => void | Promise<void>): void {
+  afterEach(function_: () => void | Promise<void>): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).afterEach(fn);
+      (
+        globalThis as unknown as { afterEach: (function__: () => void | Promise<void>) => void }
+      ).afterEach(function_);
     } else {
-      afterEach(fn);
+      afterEach(function_);
     }
   }
 
-  beforeAll(fn: () => void | Promise<void>): void {
+  beforeAll(function_: () => void | Promise<void>): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).beforeAll(fn);
+      (
+        globalThis as unknown as { beforeAll: (function__: () => void | Promise<void>) => void }
+      ).beforeAll(function_);
     } else {
-      beforeAll(fn);
+      beforeAll(function_);
     }
   }
 
-  afterAll(fn: () => void | Promise<void>): void {
+  afterAll(function_: () => void | Promise<void>): void {
     if (this.framework === 'vitest') {
-      (globalThis as any).afterAll(fn);
+      (
+        globalThis as unknown as { afterAll: (function__: () => void | Promise<void>) => void }
+      ).afterAll(function_);
     } else {
-      afterAll(fn);
+      afterAll(function_);
     }
   }
 
-  expect(value: unknown): any {
+  expect(value: unknown): ReturnType<typeof expect> {
     if (this.framework === 'vitest') {
-      return (globalThis as any).expect(value);
+      return (
+        globalThis as unknown as { expect: (value: unknown) => ReturnType<typeof expect> }
+      ).expect(value);
     } else {
       return expect(value);
     }
@@ -240,7 +279,11 @@ export class UniversalMocks {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      return (globalThis as any).vi.fn(implementation);
+      return (
+        globalThis as unknown as {
+          vi: { fn: <F extends (...args: unknown[]) => unknown>(impl?: F) => F };
+        }
+      ).vi.fn(implementation as (...args: unknown[]) => unknown) as T;
     } else {
       const mock = jest.fn(implementation);
       return mock as unknown as T;
@@ -252,9 +295,11 @@ export class UniversalMocks {
 
     for (const key in template) {
       if (typeof template[key] === 'function') {
-        (result as any)[key] = this.createMock(template[key] as any);
+        (result as Record<string, unknown>)[key] = this.createMock(
+          template[key] as (...args: unknown[]) => unknown
+        );
       } else {
-        (result as any)[key] = template[key];
+        (result as Record<string, unknown>)[key] = template[key];
       }
     }
 
@@ -264,13 +309,23 @@ export class UniversalMocks {
   static spyOn<T extends Record<string, unknown>, K extends keyof T>(
     object: T,
     method: K
-  ): any {
+  ): unknown {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      return (globalThis as any).vi.spyOn(object, method as any);
+      return (
+        globalThis as unknown as {
+          vi: {
+            spyOn: <O extends Record<string, unknown>, M extends keyof O>(
+              object_: O,
+              method: M
+            ) => unknown;
+          };
+        }
+      ).vi.spyOn(object, method);
     } else {
-      return jest.spyOn(object, method as any);
+      // Use type assertion to bypass strict type checking for dynamic method names
+      return jest.spyOn(object as Record<string, unknown>, method as never);
     }
   }
 
@@ -278,7 +333,7 @@ export class UniversalMocks {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.clearAllMocks();
+      (globalThis as unknown as { vi: { clearAllMocks: () => void } }).vi.clearAllMocks();
     } else {
       jest.clearAllMocks();
     }
@@ -288,7 +343,7 @@ export class UniversalMocks {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.resetAllMocks();
+      (globalThis as unknown as { vi: { resetAllMocks: () => void } }).vi.resetAllMocks();
     } else {
       jest.resetAllMocks();
     }
@@ -303,7 +358,7 @@ export class UniversalTimers {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.useFakeTimers();
+      (globalThis as unknown as { vi: { useFakeTimers: () => void } }).vi.useFakeTimers();
     } else {
       jest.useFakeTimers();
     }
@@ -313,7 +368,7 @@ export class UniversalTimers {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.useRealTimers();
+      (globalThis as unknown as { vi: { useRealTimers: () => void } }).vi.useRealTimers();
     } else {
       jest.useRealTimers();
     }
@@ -323,7 +378,9 @@ export class UniversalTimers {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.advanceTimersByTime(ms);
+      (
+        globalThis as unknown as { vi: { advanceTimersByTime: (ms: number) => void } }
+      ).vi.advanceTimersByTime(ms);
     } else {
       jest.advanceTimersByTime(ms);
     }
@@ -333,7 +390,7 @@ export class UniversalTimers {
     const framework = FrameworkDetector.detect();
 
     if (framework === 'vitest') {
-      (globalThis as any).vi.runAllTimers();
+      (globalThis as unknown as { vi: { runAllTimers: () => void } }).vi.runAllTimers();
     } else {
       jest.runAllTimers();
     }
@@ -344,7 +401,13 @@ export class UniversalTimers {
  * Shared fixture utilities
  */
 export class UniversalFixtures {
-  private static fixtures = new Map<string, { setup: () => unknown | Promise<unknown>; teardown?: (fixture: unknown) => void | Promise<void> }>();
+  private static readonly fixtures = new Map<
+    string,
+    {
+      setup: () => unknown | Promise<unknown>;
+      teardown?: (fixture: unknown) => void | Promise<void>;
+    }
+  >();
 
   static define<T>(
     name: string,
@@ -360,13 +423,13 @@ export class UniversalFixtures {
       throw new Error(`Fixture "${name}" not found`);
     }
 
-    return await fixture.setup() as T;
+    return (await fixture.setup()) as T;
   }
 
   static async cleanup(name: string, fixture: unknown): Promise<void> {
-    const fixtureDef = this.fixtures.get(name);
-    if (fixtureDef?.teardown) {
-      await fixtureDef.teardown(fixture);
+    const fixtureDefinition = this.fixtures.get(name);
+    if (fixtureDefinition?.teardown) {
+      await fixtureDefinition.teardown(fixture);
     }
   }
 
@@ -418,28 +481,29 @@ export class UniversalConfig {
  * Performance measurement utilities
  */
 export class UniversalPerformance {
-  static measureExecutionTime<T>(fn: () => T | Promise<T>): Promise<{ result: T; duration: number }> {
+  static async measureExecutionTime<T>(
+    function_: () => T | Promise<T>
+  ): Promise<{ result: T; duration: number }> {
     const start = performance.now();
-
-    return Promise.resolve(fn()).then(result => {
-      const end = performance.now();
-      return {
-        result,
-        duration: end - start,
-      };
-    });
+    const result = await Promise.resolve(function_());
+    const end = performance.now();
+    return {
+      result,
+      duration: end - start,
+    };
   }
 
-  static assertExecutionTime(
-    fn: () => unknown | Promise<unknown>,
+  static async assertExecutionTime(
+    function_: () => unknown | Promise<unknown>,
     maxDuration: number,
     description = 'operation'
   ): Promise<void> {
-    return this.measureExecutionTime(fn).then(({ duration }) => {
-      if (duration > maxDuration) {
-        throw new Error(`${description} took ${duration.toFixed(2)}ms, exceeding limit of ${maxDuration}ms`);
-      }
-    });
+    const { duration } = await this.measureExecutionTime(function_);
+    if (duration > maxDuration) {
+      throw new Error(
+        `${description} took ${duration.toFixed(2)}ms, exceeding limit of ${maxDuration}ms`
+      );
+    }
   }
 }
 
@@ -450,7 +514,7 @@ export function setupUniversalTesting(): void {
   const context = FrameworkDetector.getContext();
 
   // Set global test context
-  (global as any).__testContext = context;
+  (global as unknown as { __testContext?: TestContext }).__testContext = context;
 
   // Configure based on framework
   const config = UniversalConfig.getConfig();

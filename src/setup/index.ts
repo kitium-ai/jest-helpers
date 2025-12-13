@@ -3,14 +3,14 @@
  */
 
 import { setupCustomMatchers } from '../matchers';
-import { createDevTestLogger } from './internal/dev-logger.js';
+import { createDevelopmentTestLogger } from './internal/development-logger.js';
 import { setupErrorHandlers as setupSharedErrorHandlers } from './internal/error-handlers.js';
 
 export type TestSetupOptions = {
-  enableCustomMatchers?: boolean;
-  enableFakeTimers?: boolean;
-  enableMockConsole?: boolean;
-  enableMockFetch?: boolean;
+  shouldEnableCustomMatchers?: boolean;
+  shouldEnableFakeTimers?: boolean;
+  shouldEnableMockConsole?: boolean;
+  shouldEnableMockFetch?: boolean;
   mockFetchHandler?: (url: string, options?: RequestInit) => Response | Promise<Response>;
   timeout?: number;
 };
@@ -28,10 +28,10 @@ export class TestEnvironment {
    */
   setup(options: TestSetupOptions = {}): void {
     const {
-      enableCustomMatchers = true,
-      enableFakeTimers = false,
-      enableMockConsole = false,
-      enableMockFetch = false,
+      shouldEnableCustomMatchers = true,
+      shouldEnableFakeTimers = false,
+      shouldEnableMockConsole = false,
+      shouldEnableMockFetch = false,
       mockFetchHandler,
       timeout = 30000,
     } = options;
@@ -39,19 +39,19 @@ export class TestEnvironment {
     // Set test timeout
     jest.setTimeout(timeout);
 
-    if (enableCustomMatchers) {
+    if (shouldEnableCustomMatchers) {
       setupCustomMatchers();
     }
 
-    if (enableFakeTimers) {
+    if (shouldEnableFakeTimers) {
       jest.useFakeTimers();
     }
 
-    if (enableMockConsole) {
+    if (shouldEnableMockConsole) {
       this.setupConsoleMock();
     }
 
-    if (enableMockFetch) {
+    if (shouldEnableMockFetch) {
       this.setupFetchMock(mockFetchHandler);
     }
 
@@ -83,7 +83,7 @@ export class TestEnvironment {
         });
       };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-console
     console.log = captureLog('log') as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.warn = captureLog('warn') as any;
@@ -91,7 +91,7 @@ export class TestEnvironment {
     console.error = captureLog('error') as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.info = captureLog('info') as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-console
     console.debug = captureLog('debug') as any;
   }
 
@@ -142,17 +142,21 @@ export class TestEnvironment {
    */
   private setupErrorHandlers(): void {
     // Use @kitiumai/logger for error logging
-    void (async () => {
+    void (() => {
       try {
-        const logger = createDevTestLogger();
+        const logger = createDevelopmentTestLogger();
         setupSharedErrorHandlers({
           logger,
-          failOnUnhandledRejection: true,
-          failOnConsoleError: false,
+          shouldFailOnUnhandledRejection: true,
+          shouldFailOnConsoleError: false,
         });
 
         process.on('uncaughtException', (error) => {
-          logger.error('Uncaught Exception', {}, error instanceof Error ? error : new Error(String(error)));
+          logger.error(
+            'Uncaught Exception',
+            {},
+            error instanceof Error ? error : new Error(String(error))
+          );
         });
       } catch {
         // Fallback to console if logger fails to load
@@ -252,8 +256,8 @@ export const TestPresets = {
    */
   unitTest(): TestSetupOptions {
     return {
-      enableCustomMatchers: true,
-      enableMockConsole: true,
+      shouldEnableCustomMatchers: true,
+      shouldEnableMockConsole: true,
       timeout: 10000,
     };
   },
@@ -263,9 +267,9 @@ export const TestPresets = {
    */
   integrationTest(): TestSetupOptions {
     return {
-      enableCustomMatchers: true,
-      enableMockConsole: true,
-      enableMockFetch: true,
+      shouldEnableCustomMatchers: true,
+      shouldEnableMockConsole: true,
+      shouldEnableMockFetch: true,
       timeout: 30000,
     };
   },
@@ -275,8 +279,8 @@ export const TestPresets = {
    */
   databaseTest(): TestSetupOptions {
     return {
-      enableCustomMatchers: true,
-      enableMockConsole: false,
+      shouldEnableCustomMatchers: true,
+      shouldEnableMockConsole: false,
       timeout: 60000,
     };
   },
@@ -286,9 +290,9 @@ export const TestPresets = {
    */
   apiTest(): TestSetupOptions {
     return {
-      enableCustomMatchers: true,
-      enableMockFetch: true,
-      enableMockConsole: true,
+      shouldEnableCustomMatchers: true,
+      shouldEnableMockFetch: true,
+      shouldEnableMockConsole: true,
       timeout: 30000,
     };
   },

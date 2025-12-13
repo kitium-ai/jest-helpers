@@ -3,7 +3,7 @@
  * Enforces best practices and prevents common mistakes
  */
 
-import { contextManager, LogLevel, type ILogger } from '@kitiumai/logger';
+import { contextManager, type ILogger, LogLevel } from '@kitiumai/logger';
 
 import { setupContextAwareConsole } from '../console/context-aware';
 import { createAutomaticFixtureHooks, type Fixture } from '../fixtures';
@@ -11,30 +11,30 @@ import { getRequestRecorder } from '../http/contract-testing';
 import { setupCustomMatchers } from '../matchers';
 import { setupObservabilityMatchers } from '../matchers/observability';
 import { extractConsoleEntries } from './internal/console-entries.js';
-import { createDevTestLogger } from './internal/dev-logger.js';
+import { createDevelopmentTestLogger } from './internal/development-logger.js';
 import { setupErrorHandlers } from './internal/error-handlers.js';
 
 export type StrictModeOptions = {
   /**
    * Enable context propagation for all tests
    */
-  enableContextPropagation?: boolean;
+  shouldEnableContextPropagation?: boolean;
   /**
    * Enable automatic fixture cleanup
    */
-  enableAutomaticCleanup?: boolean;
+  shouldEnableAutomaticCleanup?: boolean;
   /**
    * Enable request recording for contract testing
    */
-  enableRequestRecording?: boolean;
+  shouldEnableRequestRecording?: boolean;
   /**
    * Enable observability matchers
    */
-  enableObservabilityMatchers?: boolean;
+  shouldEnableObservabilityMatchers?: boolean;
   /**
    * Enable context-aware console capture
    */
-  enableContextAwareConsole?: boolean;
+  shouldEnableContextAwareConsole?: boolean;
   /**
    * Log level for test execution
    */
@@ -46,15 +46,15 @@ export type StrictModeOptions = {
   /**
    * Fail tests on unhandled promise rejections
    */
-  failOnUnhandledRejection?: boolean;
+  shouldFailOnUnhandledRejection?: boolean;
   /**
    * Fail tests on console errors
    */
-  failOnConsoleError?: boolean;
+  shouldFailOnConsoleError?: boolean;
   /**
    * Fail tests when console output is produced
    */
-  failOnConsoleNoise?: boolean;
+  shouldFailOnConsoleNoise?: boolean;
   /**
    * Timeout for tests (ms)
    */
@@ -66,13 +66,121 @@ export type StrictModeOptions = {
   /**
    * Fail tests when timers leak between steps
    */
-  failOnTimerLeaks?: boolean;
+  shouldFailOnTimerLeaks?: boolean;
 };
 
 /**
  * Strict mode preset with all best practices enabled
  */
-export function createStrictModePreset(options: StrictModeOptions = {}): {
+function createTestLogger(logLevel: LogLevel): ILogger {
+  return createDevelopmentTestLogger(logLevel);
+}
+
+function setupMatchersIfEnabled(shouldEnableObservabilityMatchers: boolean): void {
+  if (shouldEnableObservabilityMatchers) {
+    setupMatchers(true);
+  }
+}
+
+function setupConsoleIfEnabled(
+  shouldEnableContextAwareConsole: boolean
+): ReturnType<typeof setupContextAwareConsole> | null {
+  return setupConsole(shouldEnableContextAwareConsole);
+}
+
+function setupFixturesIfEnabled(
+  shouldEnableAutomaticCleanup: boolean,
+  fixtures: Record<string, Fixture<unknown>>
+): ReturnType<typeof createAutomaticFixtureHooks> | null {
+  return setupFixtures(shouldEnableAutomaticCleanup, fixtures);
+}
+
+function setupRequestRecorderIfEnabled(
+  shouldEnableRequestRecording: boolean
+): ReturnType<typeof getRequestRecorder> | null {
+  return shouldEnableRequestRecording ? getRequestRecorder() : null;
+}
+
+function setupErrorHandlersWithOptions(
+  logger: ILogger,
+  shouldFailOnUnhandledRejection: boolean,
+  shouldFailOnConsoleError: boolean
+): void {
+  setupErrorHandlers({
+    logger,
+    shouldFailOnUnhandledRejection,
+    shouldFailOnConsoleError,
+  });
+}
+
+function createLifecycleInstance(
+  logger: ILogger,
+  fixtureHooks: ReturnType<typeof createAutomaticFixtureHooks> | null,
+  consoleHooks: ReturnType<typeof setupContextAwareConsole> | null,
+  requestRecorder: ReturnType<typeof getRequestRecorder> | null,
+  shouldEnableContextPropagation: boolean,
+  timerOptions: LifecycleGuards
+): StrictModeLifecycle {
+  return new StrictModeLifecycle(
+    logger,
+    fixtureHooks,
+    consoleHooks,
+    requestRecorder,
+    shouldEnableContextPropagation,
+    timerOptions
+  );
+}
+
+function parseOptions(options: StrictModeOptions = {}): Required<StrictModeOptions> {
+  return {
+    shouldEnableContextPropagation: true,
+    shouldEnableAutomaticCleanup: true,
+    shouldEnableRequestRecording: true,
+    shouldEnableObservabilityMatchers: true,
+    shouldEnableContextAwareConsole: true,
+    logLevel: LogLevel.INFO,
+    fixtures: {},
+    shouldFailOnUnhandledRejection: true,
+    shouldFailOnConsoleError: false,
+    shouldFailOnConsoleNoise: false,
+    timeout: 30000,
+    timerPolicy: 'real',
+    shouldFailOnTimerLeaks: true,
+    ...options,
+  };
+}
+
+function initializeComponents(parsedOptions: Required<StrictModeOptions>): {
+  logger: ILogger;
+  consoleHooks: ReturnType<typeof setupContextAwareConsole> | null;
+  fixtureHooks: ReturnType<typeof createAutomaticFixtureHooks> | null;
+  requestRecorder: ReturnType<typeof getRequestRecorder> | null;
+} {
+  const logger = createTestLogger(parsedOptions.logLevel);
+  setupMatchersIfEnabled(parsedOptions.shouldEnableObservabilityMatchers);
+  const consoleHooks = setupConsoleIfEnabled(parsedOptions.shouldEnableContextAwareConsole);
+  const fixtureHooks = setupFixturesIfEnabled(
+    parsedOptions.shouldEnableAutomaticCleanup,
+    parsedOptions.fixtures
+  );
+  const requestRecorder = setupRequestRecorderIfEnabled(parsedOptions.shouldEnableRequestRecording);
+
+  return { logger, consoleHooks, fixtureHooks, requestRecorder };
+}
+
+function setupGlobalConfiguration(
+  logger: ILogger,
+  parsedOptions: Required<StrictModeOptions>
+): void {
+  setupErrorHandlersWithOptions(
+    logger,
+    parsedOptions.shouldFailOnUnhandledRejection,
+    parsedOptions.shouldFailOnConsoleError
+  );
+  jest.setTimeout(parsedOptions.timeout);
+}
+
+function createPresetReturnObject(lifecycle: StrictModeLifecycle): {
   beforeAll: () => Promise<void>;
   beforeEach: () => Promise<void>;
   afterEach: () => Promise<void>;
@@ -81,60 +189,6 @@ export function createStrictModePreset(options: StrictModeOptions = {}): {
   getConsoleCapture: () => ReturnType<typeof setupContextAwareConsole>['getCapture'];
   getRequestRecorder: () => ReturnType<typeof getRequestRecorder>;
 } {
-  const {
-    enableContextPropagation = true,
-    enableAutomaticCleanup = true,
-    enableRequestRecording = true,
-    enableObservabilityMatchers = true,
-    enableContextAwareConsole = true,
-    logLevel = LogLevel.INFO,
-    fixtures = {},
-    failOnUnhandledRejection = true,
-    failOnConsoleError = false,
-    failOnConsoleNoise = false,
-    timeout = 30000,
-    timerPolicy = 'real',
-    failOnTimerLeaks = true,
-  } = options;
-
-  // Initialize logger
-  const logger = setupLogger(logLevel);
-
-  // Setup custom matchers
-  setupMatchers(enableObservabilityMatchers);
-
-  // Setup context-aware console
-  const consoleHooks = setupConsole(enableContextAwareConsole);
-
-  // Setup automatic fixtures
-  const fixtureHooks = setupFixtures(enableAutomaticCleanup, fixtures);
-
-  // Setup request recorder
-  const requestRecorder = enableRequestRecording ? getRequestRecorder() : null;
-
-  // Setup error handlers
-  setupErrorHandlers({
-    logger,
-    failOnUnhandledRejection,
-    failOnConsoleError,
-  });
-
-  // Set test timeout
-  jest.setTimeout(timeout);
-
-  const lifecycle = new StrictModeLifecycle(
-    logger,
-    fixtureHooks,
-    consoleHooks,
-    requestRecorder,
-    enableContextPropagation,
-    {
-      timerPolicy,
-      failOnTimerLeaks,
-      failOnConsoleNoise,
-    }
-  );
-
   return {
     beforeAll: lifecycle.beforeAll.bind(lifecycle),
     beforeEach: lifecycle.beforeEach.bind(lifecycle),
@@ -146,6 +200,37 @@ export function createStrictModePreset(options: StrictModeOptions = {}): {
   };
 }
 
+export function createStrictModePreset(options: StrictModeOptions = {}): {
+  beforeAll: () => Promise<void>;
+  beforeEach: () => Promise<void>;
+  afterEach: () => Promise<void>;
+  afterAll: () => Promise<void>;
+  getFixture: <T>(name: string) => T;
+  getConsoleCapture: () => ReturnType<typeof setupContextAwareConsole>['getCapture'];
+  getRequestRecorder: () => ReturnType<typeof getRequestRecorder>;
+} {
+  const parsedOptions = parseOptions(options);
+  const { logger, consoleHooks, fixtureHooks, requestRecorder } =
+    initializeComponents(parsedOptions);
+
+  setupGlobalConfiguration(logger, parsedOptions);
+
+  const lifecycle = createLifecycleInstance(
+    logger,
+    fixtureHooks,
+    consoleHooks,
+    requestRecorder,
+    parsedOptions.shouldEnableContextPropagation,
+    {
+      timerPolicy: parsedOptions.timerPolicy,
+      failOnTimerLeaks: parsedOptions.shouldFailOnTimerLeaks,
+      failOnConsoleNoise: parsedOptions.shouldFailOnConsoleNoise,
+    }
+  );
+
+  return createPresetReturnObject(lifecycle);
+}
+
 /**
  * Pre-configured strict mode presets
  */
@@ -155,18 +240,18 @@ export const StrictModePresets = {
    */
   unitTest(options: Partial<StrictModeOptions> = {}): ReturnType<typeof createStrictModePreset> {
     return createStrictModePreset({
-      enableContextPropagation: true,
-      enableAutomaticCleanup: true,
-      enableRequestRecording: false,
-      enableObservabilityMatchers: false,
-      enableContextAwareConsole: true,
+      shouldEnableContextPropagation: true,
+      shouldEnableAutomaticCleanup: true,
+      shouldEnableRequestRecording: false,
+      shouldEnableObservabilityMatchers: false,
+      shouldEnableContextAwareConsole: true,
       logLevel: LogLevel.DEBUG,
-      failOnUnhandledRejection: true,
-      failOnConsoleError: false,
-      failOnConsoleNoise: true,
+      shouldFailOnUnhandledRejection: true,
+      shouldFailOnConsoleError: false,
+      shouldFailOnConsoleNoise: true,
       timeout: 10000,
       timerPolicy: 'fake',
-      failOnTimerLeaks: true,
+      shouldFailOnTimerLeaks: true,
       ...options,
     });
   },
@@ -178,18 +263,18 @@ export const StrictModePresets = {
     options: Partial<StrictModeOptions> = {}
   ): ReturnType<typeof createStrictModePreset> {
     return createStrictModePreset({
-      enableContextPropagation: true,
-      enableAutomaticCleanup: true,
-      enableRequestRecording: true,
-      enableObservabilityMatchers: true,
-      enableContextAwareConsole: true,
+      shouldEnableContextPropagation: true,
+      shouldEnableAutomaticCleanup: true,
+      shouldEnableRequestRecording: true,
+      shouldEnableObservabilityMatchers: true,
+      shouldEnableContextAwareConsole: true,
       logLevel: LogLevel.INFO,
-      failOnUnhandledRejection: true,
-      failOnConsoleError: false,
-      failOnConsoleNoise: true,
+      shouldFailOnUnhandledRejection: true,
+      shouldFailOnConsoleError: false,
+      shouldFailOnConsoleNoise: true,
       timeout: 30000,
       timerPolicy: 'real',
-      failOnTimerLeaks: true,
+      shouldFailOnTimerLeaks: true,
       ...options,
     });
   },
@@ -199,18 +284,18 @@ export const StrictModePresets = {
    */
   e2eTest(options: Partial<StrictModeOptions> = {}): ReturnType<typeof createStrictModePreset> {
     return createStrictModePreset({
-      enableContextPropagation: true,
-      enableAutomaticCleanup: true,
-      enableRequestRecording: true,
-      enableObservabilityMatchers: true,
-      enableContextAwareConsole: true,
+      shouldEnableContextPropagation: true,
+      shouldEnableAutomaticCleanup: true,
+      shouldEnableRequestRecording: true,
+      shouldEnableObservabilityMatchers: true,
+      shouldEnableContextAwareConsole: true,
       logLevel: LogLevel.INFO,
-      failOnUnhandledRejection: true,
-      failOnConsoleError: false,
-      failOnConsoleNoise: true,
+      shouldFailOnUnhandledRejection: true,
+      shouldFailOnConsoleError: false,
+      shouldFailOnConsoleNoise: true,
       timeout: 60000,
       timerPolicy: 'real',
-      failOnTimerLeaks: true,
+      shouldFailOnTimerLeaks: true,
       ...options,
     });
   },
@@ -222,18 +307,18 @@ export const StrictModePresets = {
     options: Partial<StrictModeOptions> = {}
   ): ReturnType<typeof createStrictModePreset> {
     return createStrictModePreset({
-      enableContextPropagation: true,
-      enableAutomaticCleanup: true,
-      enableRequestRecording: true,
-      enableObservabilityMatchers: true,
-      enableContextAwareConsole: true,
+      shouldEnableContextPropagation: true,
+      shouldEnableAutomaticCleanup: true,
+      shouldEnableRequestRecording: true,
+      shouldEnableObservabilityMatchers: true,
+      shouldEnableContextAwareConsole: true,
       logLevel: LogLevel.INFO,
-      failOnUnhandledRejection: true,
-      failOnConsoleError: false,
-      failOnConsoleNoise: true,
+      shouldFailOnUnhandledRejection: true,
+      shouldFailOnConsoleError: false,
+      shouldFailOnConsoleNoise: true,
       timeout: 30000,
       timerPolicy: 'real',
-      failOnTimerLeaks: true,
+      shouldFailOnTimerLeaks: true,
       ...options,
     });
   },
@@ -376,10 +461,6 @@ class StrictModeLifecycle {
     }
     return this.requestRecorder;
   }
-}
-
-function setupLogger(logLevel: LogLevel): ILogger {
-  return createDevTestLogger(logLevel);
 }
 
 function setupMatchers(enableObservabilityMatchers: boolean): void {

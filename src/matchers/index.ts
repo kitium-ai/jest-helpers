@@ -73,7 +73,7 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
    * Check if an array contains an object
    */
   toContainObject(received: unknown, object: unknown) {
-    const pass =
+    const doesPass =
       Array.isArray(received) &&
       received.some((item: unknown) => {
         if (typeof item === 'object' && typeof object === 'object') {
@@ -83,9 +83,9 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
       });
 
     return {
-      pass,
+      pass: doesPass,
       message: () =>
-        pass
+        doesPass
           ? `expected array not to contain object ${JSON.stringify(object)}`
           : `expected array to contain object ${JSON.stringify(object)}`,
     };
@@ -103,14 +103,14 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
     }
 
     const mock = received as jest.Mock;
-    const pass = mock.mock.calls.some((args) => {
+    const doesPass = mock.mock.calls.some((args) => {
       return args.some((argument: unknown) => JSON.stringify(argument) === JSON.stringify(object));
     });
 
     return {
-      pass,
+      pass: doesPass,
       message: () =>
-        pass
+        doesPass
           ? `expected mock not to be called with object ${JSON.stringify(object)}`
           : `expected mock to be called with object ${JSON.stringify(object)}`,
     };
@@ -157,8 +157,13 @@ export const customMatchers: Record<string, jest.CustomMatcher> = {
   /**
    * Check if fluent assertion passes
    */
-  toSatisfyFluentAssertion(received: unknown, assertionFn: (value: any) => { result: { pass: boolean; message: string } }) {
-    const assertion = assertionFn(received);
+  toSatisfyFluentAssertion(
+    received: unknown,
+    assertionFunction: (value: unknown) => {
+      result: { pass: boolean; message: string };
+    }
+  ) {
+    const assertion = assertionFunction(received);
     return {
       pass: assertion.result.pass,
       message: () => assertion.result.message,

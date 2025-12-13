@@ -111,6 +111,7 @@ export function createMockFetchResponse(
   const {
     status = 200,
     statusText = 'OK',
+
     headers = { 'Content-Type': 'application/json' },
     ok = status >= 200 && status < 300,
   } = options;
@@ -120,10 +121,10 @@ export function createMockFetchResponse(
     status,
     statusText,
     headers: new Headers(headers),
-    json: async () => Promise.resolve(data),
-    text: async () => Promise.resolve(typeof data === 'string' ? data : JSON.stringify(data)),
-    blob: async () => Promise.resolve(new Blob([JSON.stringify(data)])),
-    arrayBuffer: async () => Promise.resolve(new ArrayBuffer(0)),
+    json: async () => await Promise.resolve(data),
+    text: async () => await Promise.resolve(typeof data === 'string' ? data : JSON.stringify(data)),
+    blob: async () => await Promise.resolve(new Blob([JSON.stringify(data)])),
+    arrayBuffer: async () => await Promise.resolve(new ArrayBuffer(0)),
     clone: function () {
       return createMockFetchResponse(data, options);
     },
@@ -190,6 +191,7 @@ export function createMockFetchWithRetries(
             status: 429,
             statusText: 'Too Many Requests',
             ok: false,
+
             headers: { 'retry-after': String(retryAfter) },
           }
         )

@@ -3,7 +3,10 @@
  * Provides utilities for setup, teardown, and testing integrated components
  */
 
+import { createLogger } from '@kitiumai/logger';
 import { retry, waitFor, withTimeout as testCoreWithTimeout } from '@kitiumai/test-core';
+
+const logger = createLogger('development', { serviceName: 'jest-helpers' });
 
 /**
  * Integration test context - manages test state and resources
@@ -166,7 +169,7 @@ export class TestScenario {
    */
   step(name: string, function_: () => Promise<void>): this {
     this.steps.push(async () => {
-      console.log(`  → ${name}`);
+      logger.info(`  → ${name}`);
       await function_();
     });
     return this;
@@ -393,7 +396,7 @@ export async function runTestsSequentially<T>(tests: Array<() => Promise<T>>): P
  * Test retry helper with reporting
  * Uses retry from @kitiumai/test-core with enhanced reporting
  */
-export async function retryTestWithReport<T>(
+export function retryTestWithReport<T>(
   testFunction: () => Promise<T>,
   options: {
     maxAttempts?: number;
@@ -413,7 +416,7 @@ export async function retryTestWithReport<T>(
       } catch (error) {
         const errorObject = error instanceof Error ? error : new Error(String(error));
         if (attempt < maxAttempts) {
-          console.log(`Retry attempt ${attempt}/${maxAttempts}: ${errorObject.message}`);
+          logger.info(`Retry attempt ${attempt}/${maxAttempts}: ${errorObject.message}`);
           onRetry?.(attempt, errorObject);
         }
         throw errorObject;
@@ -431,7 +434,7 @@ export async function retryTestWithReport<T>(
  * Timeout helper for test execution
  * Re-exports withTimeout from @kitiumai/test-core
  */
-export async function withTimeout<T>(function_: () => Promise<T>, timeoutMs: number): Promise<T> {
+export function withTimeout<T>(function_: () => Promise<T>, timeoutMs: number): Promise<T> {
   return testCoreWithTimeout(function_(), timeoutMs);
 }
 
@@ -462,7 +465,7 @@ export class TestCleanupManager {
       } catch (_error) {
         // Cleanup errors are logged but don't fail the test
         if (process.env['DEBUG']) {
-          console.error(`Cleanup function failed: ${_error}`);
+          logger.error(`Cleanup function failed: ${String(_error)}`);
         }
       }
     }

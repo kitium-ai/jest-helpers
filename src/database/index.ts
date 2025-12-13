@@ -2,6 +2,8 @@
  * Database helpers for integration testing
  */
 
+const DATABASE_NOT_CONNECTED_ERROR = 'Database not connected';
+
 export type DatabaseConnection = {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -53,7 +55,7 @@ export class TestDatabase implements DatabaseConnection {
 
   async query(_sql: string, _parameters?: unknown[]): Promise<unknown> {
     if (!this.connected) {
-      throw new Error('Database not connected');
+      throw new Error(DATABASE_NOT_CONNECTED_ERROR);
     }
 
     // In real implementation, would execute query
@@ -66,7 +68,7 @@ export class TestDatabase implements DatabaseConnection {
 
   async execute(_sql: string, _parameters?: unknown[]): Promise<void> {
     if (!this.connected) {
-      throw new Error('Database not connected');
+      throw new Error(DATABASE_NOT_CONNECTED_ERROR);
     }
 
     // In real implementation, would execute statement
@@ -75,7 +77,7 @@ export class TestDatabase implements DatabaseConnection {
 
   async transaction<T>(function_: (conn: DatabaseConnection) => Promise<T>): Promise<T> {
     if (!this.connected) {
-      throw new Error('Database not connected');
+      throw new Error(DATABASE_NOT_CONNECTED_ERROR);
     }
 
     return await function_(this);
@@ -83,7 +85,7 @@ export class TestDatabase implements DatabaseConnection {
 
   async seed(data: Record<string, unknown[]>): Promise<void> {
     if (!this.connected) {
-      throw new Error('Database not connected');
+      throw new Error(DATABASE_NOT_CONNECTED_ERROR);
     }
 
     this.seedData = data;
@@ -98,7 +100,7 @@ export class TestDatabase implements DatabaseConnection {
 
   async clear(tables?: string[]): Promise<void> {
     if (!this.connected) {
-      throw new Error('Database not connected');
+      throw new Error(DATABASE_NOT_CONNECTED_ERROR);
     }
 
     const tablesToClear = tables ?? Object.keys(this.seedData);

@@ -17,21 +17,21 @@ export type FactoryDefinition<T> = {
 
 export type FactoryGenerator<T> = () => T;
 
-export type FactoryOptions = {
-  persist?: (entity: any) => Promise<any>;
-  afterBuild?: (entity: any) => void | Promise<void>;
-  associations?: Record<string, Factory<any>>;
+export type FactoryOptions<T = unknown> = {
+  persist?: (entity: T) => Promise<T>;
+  afterBuild?: (entity: T) => void | Promise<void>;
+  associations?: Record<string, Factory<unknown>>;
 };
 
 /**
  * Base factory class
  */
 export class BaseFactory<T extends Record<string, unknown>> implements Factory<T> {
-  private definition: FactoryDefinition<T>;
+  private readonly definition: FactoryDefinition<T>;
   private overrides: Partial<T> = {};
-  private options: FactoryOptions;
+  private readonly options: FactoryOptions<T>;
 
-  constructor(definition: FactoryDefinition<T>, options: FactoryOptions = {}) {
+  constructor(definition: FactoryDefinition<T>, options: FactoryOptions<T> = {}) {
     this.definition = definition;
     this.options = options;
   }
@@ -44,7 +44,9 @@ export class BaseFactory<T extends Record<string, unknown>> implements Factory<T
     if (this.options.afterBuild) {
       const result = this.options.afterBuild(entity);
       if (result instanceof Promise) {
-        throw new Error('afterBuild should be synchronous for build(). Use create() for async operations.');
+        throw new Error(
+          'afterBuild should be synchronous for build(). Use create() for async operations.'
+        );
       }
     }
     return entity;
@@ -79,7 +81,7 @@ export class BaseFactory<T extends Record<string, unknown>> implements Factory<T
    */
   async createMany(count: number): Promise<T[]> {
     const promises = Array.from({ length: count }, () => this.create());
-    return Promise.all(promises);
+    return await Promise.all(promises);
   }
 
   /**
@@ -118,8 +120,8 @@ export class BaseFactory<T extends Record<string, unknown>> implements Factory<T
  * Factory registry for managing multiple factories
  */
 export class FactoryRegistry {
-  private factories = new Map<string, Factory<any>>();
-  private sequences = new Map<string, number>();
+  private readonly factories = new Map<string, Factory<unknown>>();
+  private readonly sequences = new Map<string, number>();
 
   /**
    * Define a factory
@@ -127,22 +129,22 @@ export class FactoryRegistry {
   define<T extends Record<string, unknown>>(
     name: string,
     definition: FactoryDefinition<T>,
-    options: FactoryOptions = {}
+    options: FactoryOptions<T> = {}
   ): Factory<T> {
     const factory = new BaseFactory(definition, options);
-    this.factories.set(name, factory);
+    this.factories.set(name, factory as Factory<unknown>);
     return factory;
   }
 
   /**
    * Get a factory by name
    */
-  get<T>(name: string): Factory<T> {
+  get<T extends Record<string, unknown>>(name: string): Factory<T> {
     const factory = this.factories.get(name);
     if (!factory) {
       throw new Error(`Factory "${name}" not found`);
     }
-    return factory;
+    return factory as Factory<T>;
   }
 
   /**
@@ -193,19 +195,24 @@ export const generators = {
   /**
    * Random integer
    */
-  integer: (min = 1, max = 1000) => () => Math.floor(Math.random() * (max - min + 1)) + min,
+  integer:
+    (min = 1, max = 1000) =>
+    () =>
+      Math.floor(Math.random() * (max - min + 1)) + min,
 
   /**
    * Random string
    */
-  string: (length = 10) => () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  },
+  string:
+    (length = 10) =>
+    () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for (let index = 0; index < length; index++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    },
 
   /**
    * Random email
@@ -247,54 +254,69 @@ export const generators = {
   /**
    * Random from array
    */
-  oneOf: <T>(options: T[]) => () => options[Math.floor(Math.random() * options.length)],
+  oneOf:
+    <T>(options: T[]) =>
+    () =>
+      options[Math.floor(Math.random() * options.length)],
 
   /**
    * Random array
    */
-  array: <T>(generator: () => T, min = 1, max = 5) => () => {
-    const length = Math.floor(Math.random() * (max - min + 1)) + min;
-    return Array.from({ length }, generator);
-  },
+  array:
+    <T>(generator: () => T, min = 1, max = 5) =>
+    () => {
+      const length = Math.floor(Math.random() * (max - min + 1)) + min;
+      return Array.from({ length }, generator);
+    },
 
   /**
    * Random object with nested structure
    */
-  object: <T extends Record<string, unknown>>(schema: { [K in keyof T]: () => T[K] }) => () => {
-    const result = {} as T;
-    for (const key in schema) {
-      result[key] = schema[key]();
-    }
-    return result;
-  },
+  object:
+    <T extends Record<string, unknown>>(schema: {
+      [K in keyof T]: () => T[K];
+    }) =>
+    () => {
+      const result = {} as T;
+      for (const key in schema) {
+        result[key] = schema[key]();
+      }
+      return result;
+    },
 };
 
 /**
  * Association helpers for linking factories
  */
-export class Association<T> {
-  constructor(private factoryName: string, private overrides: Partial<T> = {}) {}
+export class Association<T extends Record<string, unknown>> {
+  constructor(
+    private readonly factoryName: string,
+    private readonly overrides: Partial<T> = {}
+  ) {}
 
   build(): T {
     return factories.get<T>(this.factoryName).withOverrides(this.overrides).build();
   }
 
   async create(): Promise<T> {
-    return factories.get<T>(this.factoryName).withOverrides(this.overrides).create();
+    return await factories.get<T>(this.factoryName).withOverrides(this.overrides).create();
   }
 }
 
 /**
  * Create an association
  */
-export function association<T>(factoryName: string, overrides: Partial<T> = {}): Association<T> {
+export function association<T extends Record<string, unknown>>(
+  factoryName: string,
+  overrides: Partial<T> = {}
+): Association<T> {
   return new Association(factoryName, overrides);
 }
 
 /**
  * Builder pattern for complex objects
  */
-export class TestDataBuilder<T> {
+export class TestDataBuilder<T extends Record<string, unknown>> {
   private data: Partial<T> = {};
 
   /**
@@ -332,7 +354,7 @@ export class TestDataBuilder<T> {
 /**
  * Create a test data builder
  */
-export function createTestDataBuilder<T>(): TestDataBuilder<T> {
+export function createTestDataBuilder<T extends Record<string, unknown>>(): TestDataBuilder<T> {
   return new TestDataBuilder<T>();
 }
 
@@ -357,18 +379,22 @@ export const commonFactories = {
    * Post factory
    */
   post: () =>
-    factories.define('post', {
-      id: generators.id(),
-      title: generators.string(50),
-      content: generators.string(200),
-      authorId: generators.integer(1, 100),
-      published: generators.boolean(),
-      createdAt: generators.date(),
-    }, {
-      associations: {
-        author: factories.get('user'),
+    factories.define(
+      'post',
+      {
+        id: generators.id(),
+        title: generators.string(50),
+        content: generators.string(200),
+        authorId: generators.integer(1, 100),
+        published: generators.boolean(),
+        createdAt: generators.date(),
       },
-    }),
+      {
+        associations: {
+          author: factories.get('user'),
+        },
+      }
+    ),
 
   /**
    * Comment factory

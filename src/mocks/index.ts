@@ -81,10 +81,10 @@ export class ArgumentCaptor<T = unknown> {
 /**
  * Verification modes for mock verification
  */
-export interface VerificationMode {
+export type VerificationMode = {
   verify(actualCount: number): boolean;
   getDescription(): string;
-}
+};
 
 export const VerificationMode = {
   times: (count: number) => new TimesVerificationMode(count),
@@ -95,7 +95,7 @@ export const VerificationMode = {
 };
 
 class TimesVerificationMode {
-  constructor(private count: number) {}
+  constructor(private readonly count: number) {}
 
   verify(actualCount: number): boolean {
     return actualCount === this.count;
@@ -107,7 +107,7 @@ class TimesVerificationMode {
 }
 
 class AtLeastVerificationMode {
-  constructor(private minCount: number) {}
+  constructor(private readonly minCount: number) {}
 
   verify(actualCount: number): boolean {
     return actualCount >= this.minCount;
@@ -119,7 +119,7 @@ class AtLeastVerificationMode {
 }
 
 class AtMostVerificationMode {
-  constructor(private maxCount: number) {}
+  constructor(private readonly maxCount: number) {}
 
   verify(actualCount: number): boolean {
     return actualCount <= this.maxCount;
@@ -144,8 +144,8 @@ class NeverVerificationMode {
  * Enhanced mock function with advanced verification capabilities
  */
 export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
-  private mock: MockFunction<T>;
-  private argumentCaptors: ArgumentCaptor[] = [];
+  private readonly mock: MockFunction<T>;
+  private readonly argumentCaptors: ArgumentCaptor[] = [];
 
   constructor(options?: MockSetupOptions) {
     this.mock = createMock<T>(options);
@@ -163,28 +163,30 @@ export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
    */
   verify(...args: Parameters<T>): this;
   verify(mode: VerificationMode, ...args: Parameters<T>): this;
-  verify(modeOrArg?: VerificationMode | Parameters<T>[0], ...args: Parameters<T>): this {
+  verify(modeOrArgument?: VerificationMode | Parameters<T>[0], ...args: Parameters<T>): this {
     let mode: VerificationMode = VerificationMode.atLeastOnce();
-    let expectedArgs: Parameters<T>;
+    let expectedArguments: Parameters<T>;
 
-    if (modeOrArg instanceof TimesVerificationMode ||
-        modeOrArg instanceof AtLeastVerificationMode ||
-        modeOrArg instanceof AtMostVerificationMode ||
-        modeOrArg instanceof NeverVerificationMode) {
-      mode = modeOrArg;
-      expectedArgs = args as Parameters<T>;
+    if (
+      modeOrArgument instanceof TimesVerificationMode ||
+      modeOrArgument instanceof AtLeastVerificationMode ||
+      modeOrArgument instanceof AtMostVerificationMode ||
+      modeOrArgument instanceof NeverVerificationMode
+    ) {
+      mode = modeOrArgument;
+      expectedArguments = args as Parameters<T>;
     } else {
-      expectedArgs = [modeOrArg, ...args] as Parameters<T>;
+      expectedArguments = [modeOrArgument, ...args] as Parameters<T>;
     }
 
-    const matchingCalls = this.mock.mock.calls.filter(call =>
-      this.argsMatch(call, expectedArgs)
+    const matchingCalls = this.mock.mock.calls.filter((call) =>
+      this.argsMatch(call, expectedArguments)
     );
 
     if (!mode.verify(matchingCalls.length)) {
       throw new Error(
-        `Expected mock to be called ${mode.getDescription()} with ${JSON.stringify(expectedArgs)}, ` +
-        `but was called ${matchingCalls.length} time${matchingCalls.length === 1 ? '' : 's'}`
+        `Expected mock to be called ${mode.getDescription()} with ${JSON.stringify(expectedArguments)}, ` +
+          `but was called ${matchingCalls.length} time${matchingCalls.length === 1 ? '' : 's'}`
       );
     }
 
@@ -235,17 +237,17 @@ export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
       );
     }
 
-    for (let i = 0; i < expectedCalls.length; i++) {
-      const actualCall = this.mock.mock.calls[i];
-      const expectedCall = expectedCalls[i];
+    for (let index = 0; index < expectedCalls.length; index++) {
+      const actualCall = this.mock.mock.calls[index];
+      const expectedCall = expectedCalls[index];
       if (!actualCall || !expectedCall) {
-        throw new Error(`Call ${i} is missing`);
+        throw new Error(`Call ${index} is missing`);
       }
       if (!this.argsMatch(actualCall, expectedCall.args)) {
         throw new Error(
-          `Call ${i} did not match expected arguments. ` +
-          `Expected: ${JSON.stringify(expectedCall.args)}, ` +
-          `Actual: ${JSON.stringify(actualCall || [])}`
+          `Call ${index} did not match expected arguments. ` +
+            `Expected: ${JSON.stringify(expectedCall.args)}, ` +
+            `Actual: ${JSON.stringify(actualCall || [])}`
         );
       }
     }
@@ -258,7 +260,7 @@ export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
    */
   reset(): this {
     this.mock.mockReset();
-    this.argumentCaptors.forEach(captor => captor.clear());
+    this.argumentCaptors.forEach((captor) => captor.clear());
     return this;
   }
 
@@ -275,17 +277,17 @@ export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
       return false;
     }
 
-    return actual.every((arg, index) => {
-      const expectedArg = expected[index];
+    return actual.every((argument, index) => {
+      const expectedArgument = expected[index];
 
       // Handle argument captors
-      if (expectedArg instanceof ArgumentCaptor) {
-        expectedArg._capture(arg);
+      if (expectedArgument instanceof ArgumentCaptor) {
+        expectedArgument._capture(argument);
         return true;
       }
 
       // Deep equality check
-      return JSON.stringify(arg) === JSON.stringify(expectedArg);
+      return JSON.stringify(argument) === JSON.stringify(expectedArgument);
     });
   }
 }
@@ -294,38 +296,74 @@ export class AdvancedMock<T extends (...args: unknown[]) => unknown> {
  * Create a simple mock function
  */
 
+function setupReturnValue(
+  mock: jest.MockedFunction<(...args: unknown[]) => unknown>,
+  options: MockSetupOptions
+): void {
+  if (options.returnValue !== undefined) {
+    mock.mockReturnValue(options.returnValue);
+  }
+}
+
+function setupReturnValues(
+  mock: jest.MockedFunction<(...args: unknown[]) => unknown>,
+  options: MockSetupOptions
+): void {
+  if (options.returnValues) {
+    options.returnValues.forEach((value) => {
+      mock.mockReturnValueOnce(value);
+    });
+  }
+}
+
+function setupImplementation(
+  mock: jest.MockedFunction<(...args: unknown[]) => unknown>,
+  options: MockSetupOptions
+): void {
+  if (options.implementation) {
+    mock.mockImplementation(options.implementation);
+  }
+}
+
+function setupAsyncResolution(
+  mock: jest.MockedFunction<(...args: unknown[]) => unknown>,
+  options: MockSetupOptions
+): void {
+  if (options.resolveWith !== undefined && options.resolveWith !== null) {
+    // Type assertion needed for jest's mockResolvedValue
+    (mock as jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>).mockResolvedValue(
+      options.resolveWith
+    );
+  }
+}
+
+function setupAsyncRejection(
+  mock: jest.MockedFunction<(...args: unknown[]) => unknown>,
+  options: MockSetupOptions
+): void {
+  if (options.rejectWith) {
+    // Type assertion needed for jest's mockRejectedValue
+    (mock as jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>).mockRejectedValue(
+      options.rejectWith
+    );
+  }
+}
+
 export function createMock<T extends (...args: unknown[]) => unknown>(
   options?: MockSetupOptions
 ): MockFunction<T> {
   const mock = jest.fn<ReturnType<T>, Parameters<T>>();
 
-  if (options?.returnValue !== undefined) {
-    mock.mockReturnValue(options.returnValue as ReturnType<T>);
+  if (!options) {
+    return mock;
   }
 
-  if (options?.returnValues) {
-    mock.mockReturnValueOnce = jest.fn();
-    options.returnValues.forEach((value) => {
-      mock.mockReturnValueOnce(value as ReturnType<T>);
-    });
-  }
-
-  if (options?.implementation) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mock.mockImplementation(options.implementation as any);
-  }
-
-  if (options?.resolveWith !== undefined && options.resolveWith !== null) {
-    // Type assertion needed for jest's mockResolvedValue
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mock as any).mockResolvedValue(options.resolveWith);
-  }
-
-  if (options?.rejectWith) {
-    // Type assertion needed for jest's mockRejectedValue
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mock as any).mockRejectedValue(options.rejectWith);
-  }
+  const mockAny = mock as unknown as jest.MockedFunction<(...args: unknown[]) => unknown>;
+  setupReturnValue(mockAny, options);
+  setupReturnValues(mockAny, options);
+  setupImplementation(mockAny, options);
+  setupAsyncResolution(mockAny, options);
+  setupAsyncRejection(mockAny, options);
 
   return mock;
 }
@@ -464,7 +502,7 @@ export const mockTimers = {
  * Mock behavior sequencer for defining different responses for consecutive calls
  */
 export class MockSequencer<T extends (...args: unknown[]) => unknown> {
-  private behaviors: Array<
+  private readonly behaviors: Array<
     | {
         condition: (args: Parameters<T>) => boolean;
         response: ReturnType<T> | Error;
@@ -505,19 +543,27 @@ export class MockSequencer<T extends (...args: unknown[]) => unknown> {
   /**
    * Get the next behavior
    */
-  getNextBehavior(args: Parameters<T>): { response: ReturnType<T> | Error; delay?: number } {
+  getNextBehavior(args: Parameters<T>): {
+    response: ReturnType<T> | Error;
+    delay?: number;
+  } {
     const behavior = this.behaviors[this.callCount % this.behaviors.length];
 
     if (behavior?.condition && !behavior.condition(args)) {
       // Find the first matching behavior
-      const matchingBehavior = this.behaviors.find(b => !b.condition || b.condition(args));
+      const matchingBehavior = this.behaviors.find((b) => !b.condition || b.condition(args));
       if (matchingBehavior) {
-        return { response: matchingBehavior.response, ...(matchingBehavior.delay !== undefined && { delay: matchingBehavior.delay }) };
+        return {
+          response: matchingBehavior.response,
+          ...(matchingBehavior.delay !== undefined && {
+            delay: matchingBehavior.delay,
+          }),
+        };
       }
     }
 
     this.callCount++;
-    return behavior || { response: undefined as ReturnType<T> };
+    return behavior ?? { response: undefined as ReturnType<T> };
   }
 
   /**
@@ -571,7 +617,11 @@ export class ManagedMock<T extends (...args: unknown[]) => unknown> {
     return this.mock;
   }
 
-  getCalls(): Array<{ args: Parameters<T>; result?: ReturnType<T>; error?: Error }> {
+  getCalls(): Array<{
+    args: Parameters<T>;
+    result?: ReturnType<T>;
+    error?: Error;
+  }> {
     return this.mock.mock.calls.map((args, index) => ({
       args: args as Parameters<T>,
       result: this.mock.mock.results[index]?.value as ReturnType<T>,

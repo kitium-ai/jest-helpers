@@ -7,14 +7,14 @@ import type { ILogger } from '@kitiumai/logger';
 
 export type ErrorHandlerOptions = {
   logger: ILogger;
-  failOnUnhandledRejection: boolean;
-  failOnConsoleError: boolean;
+  shouldFailOnUnhandledRejection: boolean;
+  shouldFailOnConsoleError: boolean;
 };
 
 export function setupErrorHandlers(options: ErrorHandlerOptions): void {
-  const { logger, failOnUnhandledRejection, failOnConsoleError } = options;
+  const { logger, shouldFailOnUnhandledRejection, shouldFailOnConsoleError } = options;
 
-  if (failOnUnhandledRejection) {
+  if (shouldFailOnUnhandledRejection) {
     process.on('unhandledRejection', (reason) => {
       logger.error('Unhandled Promise Rejection in test', {
         reason: reason instanceof Error ? reason.message : String(reason),
@@ -23,13 +23,14 @@ export function setupErrorHandlers(options: ErrorHandlerOptions): void {
     });
   }
 
-  if (failOnConsoleError) {
+  if (shouldFailOnConsoleError) {
     const originalError = console.error;
     console.error = (...args: unknown[]) => {
-      logger.error('Console error in test', { message: args.map(String).join(' ') });
+      logger.error('Console error in test', {
+        message: args.map(String).join(' '),
+      });
       originalError(...args);
       throw new Error('Console error detected in test');
     };
   }
 }
-

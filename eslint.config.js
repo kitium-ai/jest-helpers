@@ -1,119 +1,72 @@
 /**
  * ESLint configuration for @kitiumai/jest-helpers
- * Uses @kitiumai/lint as the base configuration
+ * Uses the mandatory @kitiumai/lint library preset.
  */
 
-import { eslintBaseConfig, eslintTypeScriptConfig, eslintJestConfig } from '@kitiumai/lint';
+import { library } from '@kitiumai/lint';
 
 export default [
-  ...eslintBaseConfig,
-  ...eslintTypeScriptConfig,
-  eslintJestConfig,
+  ...library.flat(),
   {
     ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.cjs', '*.d.ts'],
   },
   {
-    name: 'console-utilities',
-    files: ['**/console/**/*.ts'],
+    name: 'jest-helpers/prettier-is-source-of-truth',
+    files: ['**/*.{ts,tsx,js,jsx,cjs,mjs}'],
     rules: {
-      'no-console': 'off', // Console utilities need to override console
-    },
-  },
-  {
-    name: 'jest-wrapper-overrides',
-    files: ['**/setup/jest-wrapper.ts'],
-    rules: {
-      'import/no-duplicates': 'off', // Need separate imports for types and values from different paths
-      'no-duplicate-imports': 'off',
-    },
-  },
-  {
-    name: 'jest-helpers-overrides',
-    files: ['**/*.{ts,tsx}'],
-    rules: {
-      // Allow higher complexity for utility functions
-      complexity: ['warn', 20],
-      'max-statements': ['warn', 25],
-      'max-lines-per-function': ['warn', 110],
-      // Allow bitwise operators in data generators (UUID generation)
-      'no-bitwise': 'off',
-      // Allow non-null assertions in test utilities
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      // Allow any type in utility functions
-      '@typescript-eslint/no-explicit-any': 'warn',
-      // Disable import/order to avoid conflicts with simple-import-sort
-      'import/order': 'off',
-      // Relax naming convention for local variables
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          selector: 'variable',
-          modifiers: ['const'],
-          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
-        },
-        {
-          selector: 'variable',
-          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
-          filter: {
-            regex:
-              '^(result|hasResult|conditionResult|sourceValue|targetValue|error_|errorObject)$',
-            match: true,
-          },
-        },
-        {
-          selector: 'variable',
-          format: null, // Allow any format for unused variables (e.g., _)
-          filter: {
-            regex: '^_',
-            match: true,
-          },
-        },
-      ],
-      // Allow console in console utilities
-      'no-console': 'off',
-      // Allow async methods without await (for mock implementations)
-      '@typescript-eslint/require-await': 'warn',
-      // Allow useless catch in some cases
-      'no-useless-catch': 'warn',
-      // Allow nullish coalescing preference warnings
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      // Disable indent rule - let prettier handle it
+      // Defer indentation to Prettier to avoid false positives and fix cycles.
       indent: 'off',
-      // Allow relative imports within the package
-      'no-restricted-imports': 'off',
-      // Allow interfaces (some are needed for declaration merging)
-      '@typescript-eslint/consistent-type-definitions': 'warn',
-      // Allow case declarations with braces
-      'no-case-declarations': 'off',
-      // Allow floating promises in some cases (e.g., fire-and-forget)
-      '@typescript-eslint/no-floating-promises': 'warn',
-      // Disable space-before-function-paren - handled by prettier
-      'space-before-function-paren': 'off',
-      // Allow missing return types in some utility functions
-      '@typescript-eslint/explicit-function-return-type': 'warn',
-      // Allow default exports for auto-setup files
-      'import/no-default-export': 'off',
-      // Allow then/catch in some cases
-      'promise/prefer-await-to-then': 'warn',
-      'promise/always-return': 'warn',
-      // Allow abbreviations for common test variables
-      'unicorn/prevent-abbreviations': [
+    },
+  },
+  {
+    name: 'jest-helpers/eslint9-rule-compat',
+    rules: {
+      // ESLint 9 schema compatibility for lint preset
+      'no-restricted-imports': [
         'warn',
         {
-          allowList: {
-            e: true,
-            e2e: true,
-            args: true,
-            props: true,
-            params: true,
-            req: true,
-            res: true,
-            err: true,
-          },
+          patterns: [
+            {
+              group: ['../../*', '../../../*'],
+              message: 'Prefer module aliases over deep relative imports for maintainability.',
+            },
+          ],
         },
       ],
-      // Allow flexible promise parameter names
-      'promise/param-names': 'warn',
+    },
+  },
+  {
+    name: 'jest-helpers/eslint-config-overrides',
+    files: ['eslint.config.js'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+  {
+    name: 'jest-helpers/specific-rule-overrides',
+    files: ['src/**/*.ts'],
+    rules: {
+      // Temporarily disable rules that cause circular fixes
+      '@typescript-eslint/naming-convention': 'off',
+      'simple-import-sort/imports': 'off',
+      // Disable space-before-function-paren as it conflicts with TypeScript type definitions
+      'space-before-function-paren': 'off',
+      // Allow complexity up to 15 for complex test utilities
+      complexity: ['error', 15],
+      // Allow unused variables that start with underscore
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+      // Disable security warnings that are false positives in testing context
+      'security/detect-object-injection': 'off',
+      'security/detect-unsafe-regex': 'off',
+      'security/detect-non-literal-regexp': 'off',
     },
   },
 ];

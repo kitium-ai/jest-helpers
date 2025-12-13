@@ -90,9 +90,9 @@ export * from './matchers/fluent';
 
 // Property-based testing
 export type { Generator } from './property-testing';
-export { propertyTest, generators as propertyGenerators } from './property-testing';
+export { generators as propertyGenerators, propertyTest } from './property-testing';
 
-// Test data factories  
+// Test data factories
 export type { Factory, FactoryDefinition, FactoryOptions } from './factories';
 export { BaseFactory, createTestDataBuilder, generators as factoryGenerators } from './factories';
 
@@ -101,7 +101,13 @@ export * from './enhanced-errors';
 
 // Advanced mocking capabilities
 export type { ArgumentCaptor } from './mocks';
-export { VerificationMode, createAdvancedMock, createSpy, MockSequencer, createSequencedMock } from './mocks';
+export {
+  createAdvancedMock,
+  createSequencedMock,
+  createSpy,
+  MockSequencer,
+  VerificationMode,
+} from './mocks';
 
 // Visual and accessibility testing
 export * from './visual-accessibility';
@@ -121,4 +127,4 @@ export { jestHelpers, setupJest } from './setup/jest-wrapper';
 // This is the simplest way to use the package - zero configuration!
 
 // Namespace exports
-export { namespaced, default as namespacedDefault } from './index.namespaced';
+export { namespaced } from './index.namespaced';

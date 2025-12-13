@@ -33,7 +33,7 @@ export type ChainableMatcher<T, R extends AssertionChain<T>> = {
  */
 export class AssertionChainImpl<T> implements AssertionChain<T> {
   private _negated = false;
-  private _results: AssertionResult[] = [];
+  private readonly _results: AssertionResult[] = [];
   public readonly value: T;
 
   constructor(value: T) {
@@ -63,7 +63,9 @@ export class AssertionChainImpl<T> implements AssertionChain<T> {
     return {
       ...lastResult,
       pass: this._negated ? !lastResult.pass : lastResult.pass,
-      message: this._negated ? lastResult.message.replace('expected', 'expected not') : lastResult.message,
+      message: this._negated
+        ? lastResult.message.replace('expected', 'expected not')
+        : lastResult.message,
     };
   }
 
@@ -71,7 +73,12 @@ export class AssertionChainImpl<T> implements AssertionChain<T> {
     this._results.push(result);
   }
 
-  protected assert(condition: boolean, message: string, actual?: unknown, expected?: unknown): this {
+  protected assert(
+    condition: boolean,
+    message: string,
+    actual?: unknown,
+    expected?: unknown
+  ): this {
     this.addResult({
       pass: condition,
       message,
@@ -109,9 +116,9 @@ export class StringAssertionChain extends AssertionChainImpl<string> {
   }
 
   toContain(substring: string): this {
-    const contains = this.value.includes(substring);
+    const doesContain = this.value.includes(substring);
     return this.assert(
-      contains,
+      doesContain,
       `expected "${this.value}" to contain "${substring}"`,
       this.value,
       substring
@@ -119,9 +126,9 @@ export class StringAssertionChain extends AssertionChainImpl<string> {
   }
 
   toStartWith(prefix: string): this {
-    const startsWith = this.value.startsWith(prefix);
+    const doesStartWith = this.value.startsWith(prefix);
     return this.assert(
-      startsWith,
+      doesStartWith,
       `expected "${this.value}" to start with "${prefix}"`,
       this.value,
       prefix
@@ -129,9 +136,9 @@ export class StringAssertionChain extends AssertionChainImpl<string> {
   }
 
   toEndWith(suffix: string): this {
-    const endsWith = this.value.endsWith(suffix);
+    const doesEndWith = this.value.endsWith(suffix);
     return this.assert(
-      endsWith,
+      doesEndWith,
       `expected "${this.value}" to end with "${suffix}"`,
       this.value,
       suffix
@@ -149,13 +156,8 @@ export class StringAssertionChain extends AssertionChainImpl<string> {
   }
 
   toMatch(regex: RegExp): this {
-    const matches = regex.test(this.value);
-    return this.assert(
-      matches,
-      `expected "${this.value}" to match ${regex}`,
-      this.value,
-      regex
-    );
+    const doesMatch = regex.test(this.value);
+    return this.assert(doesMatch, `expected "${this.value}" to match ${regex}`, this.value, regex);
   }
 }
 
@@ -215,7 +217,7 @@ export class NumberAssertionChain extends AssertionChainImpl<number> {
 
   toBeCloseTo(value: number, precision = 2): this {
     const diff = Math.abs(this.value - value);
-    const isClose = diff < Math.pow(10, -precision);
+    const isClose = diff < 10 ** -precision;
     return this.assert(
       isClose,
       `expected ${this.value} to be close to ${value} (within ${precision} decimal places)`,
@@ -250,10 +252,11 @@ export class ArrayAssertionChain<T> extends AssertionChainImpl<T[]> {
   }
 
   toContainObject(object: Partial<T>): this {
-    const contains = this.value.some(item => {
+    const contains = this.value.some((item) => {
       if (typeof item === 'object' && item !== null && typeof object === 'object') {
-        return Object.keys(object).every(key =>
-          (item as any)[key] === (object as any)[key]
+        return Object.keys(object).every(
+          (key) =>
+            (item as Record<string, unknown>)[key] === (object as Record<string, unknown>)[key]
         );
       }
       return false;
@@ -267,7 +270,7 @@ export class ArrayAssertionChain<T> extends AssertionChainImpl<T[]> {
   }
 
   each(predicate: (item: T) => boolean): this {
-    const allMatch = this.value.every(predicate);
+    const allMatch = this.value.every((item) => predicate(item));
     return this.assert(
       allMatch,
       `expected all items in array to match predicate`,
@@ -277,7 +280,7 @@ export class ArrayAssertionChain<T> extends AssertionChainImpl<T[]> {
   }
 
   some(predicate: (item: T) => boolean): this {
-    const someMatch = this.value.some(predicate);
+    const someMatch = this.value.some((item) => predicate(item));
     return this.assert(
       someMatch,
       `expected at least one item in array to match predicate`,
@@ -314,9 +317,9 @@ export class ObjectAssertionChain<T extends Record<string, unknown>> extends Ass
   }
 
   toMatchShape(shape: Partial<T>): this {
-    const matches = Object.keys(shape).every(key => {
-      const expectedValue = (shape as any)[key];
-      const actualValue = (this.value as any)[key];
+    const matches = Object.keys(shape).every((key) => {
+      const expectedValue = (shape as Record<string, unknown>)[key];
+      const actualValue = (this.value as Record<string, unknown>)[key];
 
       if (typeof expectedValue === 'object' && expectedValue !== null) {
         return JSON.stringify(actualValue) === JSON.stringify(expectedValue);
@@ -359,11 +362,11 @@ export class FunctionAssertionChain extends AssertionChainImpl<jest.Mock> {
   }
 
   toHaveBeenCalledWith(...args: unknown[]): this {
-    const calledWithArgs = this.value.mock.calls.some(call =>
-      JSON.stringify(call) === JSON.stringify(args)
+    const calledWithArguments = this.value.mock.calls.some(
+      (call) => JSON.stringify(call) === JSON.stringify(args)
     );
     return this.assert(
-      calledWithArgs,
+      calledWithArguments,
       `expected mock function to have been called with ${JSON.stringify(args)}`,
       this.value.mock.calls,
       args
@@ -372,9 +375,9 @@ export class FunctionAssertionChain extends AssertionChainImpl<jest.Mock> {
 
   toHaveBeenLastCalledWith(...args: unknown[]): this {
     const lastCall = this.value.mock.calls[this.value.mock.calls.length - 1];
-    const calledWithArgs = lastCall && JSON.stringify(lastCall) === JSON.stringify(args);
+    const calledWithArguments = lastCall && JSON.stringify(lastCall) === JSON.stringify(args);
     return this.assert(
-      calledWithArgs,
+      calledWithArguments,
       `expected mock function to have been last called with ${JSON.stringify(args)}`,
       lastCall,
       args
@@ -392,7 +395,8 @@ export const assertThat = {
   string: (actual: string): StringAssertionChain => new StringAssertionChain(actual),
   number: (actual: number): NumberAssertionChain => new NumberAssertionChain(actual),
   array: <T>(actual: T[]): ArrayAssertionChain<T> => new ArrayAssertionChain(actual),
-  object: <T extends Record<string, unknown>>(actual: T): ObjectAssertionChain<T> => new ObjectAssertionChain(actual),
+  object: <T extends Record<string, unknown>>(actual: T): ObjectAssertionChain<T> =>
+    new ObjectAssertionChain(actual),
   mock: (actual: jest.Mock): FunctionAssertionChain => new FunctionAssertionChain(actual),
 };
 
@@ -410,7 +414,9 @@ export function assertThatValue<T>(actual: T): AssertionChain<T> {
     return new ArrayAssertionChain(actual) as unknown as AssertionChain<T>;
   }
   if (typeof actual === 'object' && actual !== null) {
-    return new ObjectAssertionChain(actual as Record<string, unknown>) as unknown as AssertionChain<T>;
+    return new ObjectAssertionChain(
+      actual as Record<string, unknown>
+    ) as unknown as AssertionChain<T>;
   }
   if (typeof actual === 'function' && 'mock' in actual) {
     const mockInstance = actual as unknown as jest.Mock;
@@ -426,10 +432,10 @@ export function assertThatValue<T>(actual: T): AssertionChain<T> {
  */
 export function setupFluentAssertions(): void {
   // Extend Jest expect with fluent assertions
-  const originalExpect = (globalThis as any).expect;
+  const originalExpect = (globalThis as unknown as { expect?: Record<string, unknown> }).expect;
 
   if (originalExpect) {
-    (originalExpect as any).fluent = assertThat;
-    (originalExpect as any).assertThat = assertThatValue;
+    originalExpect['fluent'] = assertThat;
+    originalExpect['assertThat'] = assertThatValue;
   }
 }

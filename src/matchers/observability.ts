@@ -77,10 +77,12 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
 
     return {
       pass: hasMatch,
-      message: () =>
-        hasMatch
-          ? `expected logs not to contain message matching ${messageString}${level ? ` at level ${level}` : ''}`
-          : `expected logs to contain message matching ${messageString}${level ? ` at level ${level}` : ''}`,
+      message: () => {
+        const levelString = level ? ` at level ${level}` : '';
+        return hasMatch
+          ? `expected logs not to contain message matching ${messageString}${levelString}`
+          : `expected logs to contain message matching ${messageString}${levelString}`;
+      },
     };
   },
 
@@ -147,10 +149,12 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
 
     return {
       pass: hasMetrics,
-      message: () =>
-        hasMetrics
-          ? `expected metrics not to have ${name} = ${value}${labels ? ` with labels ${JSON.stringify(labels)}` : ''}`
-          : `expected metrics to have ${name} = ${value}${labels ? ` with labels ${JSON.stringify(labels)}` : ''} (metrics not available)`,
+      message: () => {
+        const labelsString = labels ? ` with labels ${JSON.stringify(labels)}` : '';
+        return hasMetrics
+          ? `expected metrics not to have ${name} = ${value}${labelsString}`
+          : `expected metrics to have ${name} = ${value}${labelsString} (metrics not available)`;
+      },
     };
   },
 
@@ -162,19 +166,21 @@ export const observabilityMatchers: Record<string, jest.CustomMatcher> = {
     const hasSpan = context.traceId !== undefined;
 
     // Check if attributes match (if provided)
-    let attributesMatch = true;
+    let doAttributesMatch = true;
     if (attributes && context.metadata) {
-      attributesMatch = Object.keys(attributes).every((key) => {
+      doAttributesMatch = Object.keys(attributes).every((key) => {
         return context.metadata?.[key] === attributes[key];
       });
     }
 
     return {
-      pass: hasSpan && attributesMatch,
-      message: () =>
-        hasSpan && attributesMatch
-          ? `expected trace not to have span ${operationName}${attributes ? ` with attributes ${JSON.stringify(attributes)}` : ''}`
-          : `expected trace to have span ${operationName}${attributes ? ` with attributes ${JSON.stringify(attributes)}` : ''}`,
+      pass: hasSpan && doAttributesMatch,
+      message: () => {
+        const attributesString = attributes ? ` with attributes ${JSON.stringify(attributes)}` : '';
+        return hasSpan && doAttributesMatch
+          ? `expected trace not to have span ${operationName}${attributesString}`
+          : `expected trace to have span ${operationName}${attributesString}`;
+      },
     };
   },
 

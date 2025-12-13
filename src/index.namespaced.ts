@@ -99,8 +99,3 @@ export const namespaced = {
    */
   timers,
 };
-
-/**
- * Default export for namespace access
- */
-export default namespaced;

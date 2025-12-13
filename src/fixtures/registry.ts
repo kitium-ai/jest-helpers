@@ -5,8 +5,9 @@
 
 import { contextManager } from '@kitiumai/logger';
 
-import type { Fixture } from './index';
 import { getInternalLogger } from '../internal-logger.js';
+
+import type { Fixture } from './index';
 
 type RegisteredFixture<T> = {
   fixture: Fixture<T>;
@@ -38,14 +39,14 @@ export class AutomaticFixtureRegistry {
   /**
    * Setup a fixture (called automatically in beforeEach)
    */
-  async setup<T>(name: string): Promise<T> {
+  setup<T>(name: string): Promise<T> {
     const registered = this.fixtures.get(name);
     if (!registered) {
       throw new Error(`Fixture '${name}' not registered`);
     }
 
     if (registered.setup) {
-      return registered.data as T;
+      return Promise.resolve(registered.data as T);
     }
 
     // Initialize context for fixture setup
@@ -118,7 +119,9 @@ export class AutomaticFixtureRegistry {
         });
 
         await contextManager.run(context, async () => {
-          this.logger.debug(`Cleaning up fixture: ${name}`, { fixtureName: name });
+          this.logger.debug(`Cleaning up fixture: ${name}`, {
+            fixtureName: name,
+          });
           await registered.fixture.teardown(registered.data);
         });
 
@@ -135,7 +138,7 @@ export class AutomaticFixtureRegistry {
 
     if (errors.length > 0) {
       throw new Error(
-        `Failed to cleanup ${errors.length} fixture(s): ${errors.map((e) => e.message).join(', ')}`
+        `Failed to cleanup ${errors.length} fixture(s): ${errors.map((error) => error.message).join(', ')}`
       );
     }
   }

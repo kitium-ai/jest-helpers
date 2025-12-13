@@ -5,8 +5,9 @@
 
 import { contextManager } from '@kitiumai/logger';
 
-import type { HttpRequest, HttpResponse } from './index';
 import { getInternalLogger } from '../internal-logger.js';
+
+import type { HttpRequest, HttpResponse } from './index';
 
 export type RecordedRequest = {
   timestamp: number;
@@ -141,6 +142,53 @@ export class RequestRecorder {
     };
   }
 
+  private checkStatusAssertion(
+    assertion: { path: string; expected: unknown },
+    matching: RecordedRequest,
+    failures: string[]
+  ): void {
+    if (matching.response?.status !== assertion.expected) {
+      failures.push(
+        `Status mismatch for ${assertion.path}: expected ${assertion.expected}, got ${matching.response?.status}`
+      );
+    }
+  }
+
+  private checkHeaderAssertion(
+    assertion: { path: string; expected: unknown },
+    matching: RecordedRequest,
+    failures: string[]
+  ): void {
+    const headerValue = matching.response?.headers?.[assertion.path];
+    if (headerValue !== assertion.expected) {
+      failures.push(
+        `Header mismatch for ${assertion.path}: expected ${assertion.expected}, got ${headerValue}`
+      );
+    }
+  }
+
+  private checkBodyAssertion(
+    assertion: { path: string; expected: unknown },
+    matching: RecordedRequest,
+    failures: string[]
+  ): void {
+    if (JSON.stringify(matching.response?.data) !== JSON.stringify(assertion.expected)) {
+      failures.push(`Body mismatch for ${assertion.path}`);
+    }
+  }
+
+  private checkTimingAssertion(
+    assertion: { path: string; expected: unknown },
+    matching: RecordedRequest,
+    failures: string[]
+  ): void {
+    if (matching.duration && matching.duration > (assertion.expected as number)) {
+      failures.push(
+        `Timing violation for ${assertion.path}: ${matching.duration}ms > ${assertion.expected}ms`
+      );
+    }
+  }
+
   private checkAssertion(
     assertion: {
       type: 'status' | 'header' | 'body' | 'timing';
@@ -152,31 +200,16 @@ export class RequestRecorder {
   ): void {
     switch (assertion.type) {
       case 'status':
-        if (matching.response?.status !== assertion.expected) {
-          failures.push(
-            `Status mismatch for ${assertion.path}: expected ${assertion.expected}, got ${matching.response?.status}`
-          );
-        }
+        this.checkStatusAssertion(assertion, matching, failures);
         break;
       case 'header':
-        const headerValue = matching.response?.headers?.[assertion.path];
-        if (headerValue !== assertion.expected) {
-          failures.push(
-            `Header mismatch for ${assertion.path}: expected ${assertion.expected}, got ${headerValue}`
-          );
-        }
+        this.checkHeaderAssertion(assertion, matching, failures);
         break;
       case 'body':
-        if (JSON.stringify(matching.response?.data) !== JSON.stringify(assertion.expected)) {
-          failures.push(`Body mismatch for ${assertion.path}`);
-        }
+        this.checkBodyAssertion(assertion, matching, failures);
         break;
       case 'timing':
-        if (matching.duration && matching.duration > (assertion.expected as number)) {
-          failures.push(
-            `Timing violation for ${assertion.path}: ${matching.duration}ms > ${assertion.expected}ms`
-          );
-        }
+        this.checkTimingAssertion(assertion, matching, failures);
         break;
     }
   }

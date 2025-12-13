@@ -3,6 +3,8 @@
  * Re-exports framework-agnostic utilities from @kitiumai/test-core
  */
 
+const FAKE_TIMERS_ERROR = 'Fake timers must be enabled';
+
 // Re-export framework-agnostic timer utilities from test-core
 export {
   assertExecutionTime,
@@ -53,7 +55,7 @@ export class TimerManager {
    */
   advanceBy(ms: number): void {
     if (!this.isUsingFakeTimers) {
-      throw new Error('Fake timers must be enabled');
+      throw new Error(FAKE_TIMERS_ERROR);
     }
     jest.advanceTimersByTime(ms);
     this.timerStats.processed += Math.floor(ms / 100); // Rough estimation
@@ -64,7 +66,7 @@ export class TimerManager {
    */
   advanceToNextTimer(): void {
     if (!this.isUsingFakeTimers) {
-      throw new Error('Fake timers must be enabled');
+      throw new Error(FAKE_TIMERS_ERROR);
     }
     jest.runOnlyPendingTimers();
     this.timerStats.processed++;
@@ -75,7 +77,7 @@ export class TimerManager {
    */
   advanceAllTimers(): void {
     if (!this.isUsingFakeTimers) {
-      throw new Error('Fake timers must be enabled');
+      throw new Error(FAKE_TIMERS_ERROR);
     }
     jest.runAllTimers();
     this.timerStats.processed = this.timerStats.total;
@@ -86,7 +88,7 @@ export class TimerManager {
    */
   clearAll(): void {
     if (!this.isUsingFakeTimers) {
-      throw new Error('Fake timers must be enabled');
+      throw new Error(FAKE_TIMERS_ERROR);
     }
     jest.clearAllTimers();
     this.timerStats.pending = 0;

@@ -138,7 +138,9 @@ export class GraphQLMockRegistry {
 
     // Apply delay if specified
     if (mock.delay) {
-      await new Promise((resolve) => setTimeout(resolve, mock.delay));
+      await new Promise((resolve) => {
+        setTimeout(resolve, mock.delay);
+      });
     }
 
     // Get response
@@ -213,42 +215,44 @@ export class GraphQLMockRegistry {
     };
   }
   private findMatchingMock(request: GraphQLRequest): GraphQLMock | undefined {
-    return this.mocks.find((m) => {
-      // Match operation name
-      if (m.operationName && request.operationName !== m.operationName) {
+    return this.mocks.find((mock) => {
+      if (!this.matchesOperationName(mock, request)) {
         return false;
       }
-
-      // Match query
-      if (m.query) {
-        if (typeof m.query === 'string') {
-          if (!request.query.includes(m.query)) {
-            return false;
-          }
-        } else if (!m.query.test(request.query)) {
-          return false;
-        }
+      if (!this.matchesQuery(mock, request)) {
+        return false;
       }
-
-      // Match variables
-      if (m.variables && request.variables) {
-        if (typeof m.variables === 'function') {
-          if (!m.variables(request.variables)) {
-            return false;
-          }
-        } else {
-          const mockVariables = m.variables as Record<string, unknown>;
-          const variablesMatch = Object.keys(mockVariables).every((key) => {
-            return request.variables?.[key] === mockVariables[key];
-          });
-          if (!variablesMatch) {
-            return false;
-          }
-        }
-      }
-
-      return true;
+      return this.matchesVariables(mock, request);
     });
+  }
+
+  private matchesOperationName(mock: GraphQLMock, request: GraphQLRequest): boolean {
+    return !mock.operationName || request.operationName === mock.operationName;
+  }
+
+  private matchesQuery(mock: GraphQLMock, request: GraphQLRequest): boolean {
+    return (
+      !mock.query ||
+      (typeof mock.query === 'string'
+        ? request.query.includes(mock.query)
+        : mock.query.test(request.query))
+    );
+  }
+
+  private matchesVariables(mock: GraphQLMock, request: GraphQLRequest): boolean {
+    if (!mock.variables) {
+      return true;
+    }
+    if (!request.variables) {
+      return false;
+    }
+    if (typeof mock.variables === 'function') {
+      return Boolean(mock.variables(request.variables));
+    }
+    const mockVariables = mock.variables as Record<string, unknown>;
+    return Object.keys(mockVariables).every(
+      (key) => request.variables?.[key] === mockVariables[key]
+    );
   }
 }
 
@@ -282,8 +286,8 @@ export function createGraphQLFetchMock(
       ok: !response.errors || response.errors.length === 0,
       status: response.errors ? 400 : 200,
       statusText: response.errors ? 'Bad Request' : 'OK',
-      json: async () => Promise.resolve(response),
-      text: async () => Promise.resolve(JSON.stringify(response)),
+      json: async () => await Promise.resolve(response),
+      text: async () => await Promise.resolve(JSON.stringify(response)),
     } as Response;
   });
 }

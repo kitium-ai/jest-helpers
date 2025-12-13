@@ -45,14 +45,16 @@ export type AccessibilityReport = {
     nodes: Array<{ target: string }>;
   }>;
   inapplicable: Array<{
-    id: string; description: string }>;
+    id: string;
+    description: string;
+  }>;
 };
 
 /**
  * Visual regression testing utilities
  */
 export class VisualTester {
-  private options: Required<VisualComparisonOptions>;
+  private readonly options: Required<VisualComparisonOptions>;
 
   constructor(options: VisualComparisonOptions = {}) {
     this.options = {
@@ -107,12 +109,14 @@ export class VisualTester {
    * Take screenshot of element or page
    */
   async takeScreenshot(): Promise<Buffer> {
+    await Promise.resolve();
     // This would integrate with a browser automation library
     // For now, return a mock buffer
     return Buffer.from('mock-screenshot-data');
   }
 
   private async readImage(): Promise<Buffer | null> {
+    await Promise.resolve();
     // Mock implementation
     try {
       // In real implementation: return fs.readFileSync(path);
@@ -123,11 +127,13 @@ export class VisualTester {
   }
 
   private async writeImage(): Promise<void> {
+    await Promise.resolve();
     // Mock implementation
     // In real implementation: fs.writeFileSync(path, data);
   }
 
   private async compareImages(): Promise<{ diff: Buffer; percentage: number }> {
+    await Promise.resolve();
     // Mock implementation - in reality would use pixelmatch
     return {
       diff: Buffer.from('mock-diff-data'),
@@ -142,19 +148,20 @@ export class VisualTester {
 export class AccessibilityTester {
   constructor(options: AccessibilityCheckOptions = {}) {
     // Store options if needed in the future
-    const opts: Required<AccessibilityCheckOptions> = {
+    const options_: Required<AccessibilityCheckOptions> = {
       rules: options.rules ?? [],
       level: options.level ?? 'AA',
       includeBestPractices: options.includeBestPractices ?? true,
       excludeRules: options.excludeRules ?? [],
     };
-    void opts; // Use opts to avoid unused variable warning
+    void options_; // Use opts to avoid unused variable warning
   }
 
   /**
    * Check accessibility of HTML content
    */
   async checkAccessibility(): Promise<AccessibilityReport> {
+    await Promise.resolve();
     // This would integrate with axe-core or similar library
     // For now, return mock results
 
@@ -165,11 +172,13 @@ export class AccessibilityTester {
         description: 'Elements must have sufficient color contrast',
         help: 'Ensure the contrast ratio between text and background is at least 4.5:1',
         helpUrl: 'https://dequeuniversity.com/rules/axe/4.4/color-contrast',
-        nodes: [{
-          target: 'button',
-          html: '<button style="color: #999; background: #fff;">Click me</button>',
-          failureSummary: 'Fix the contrast ratio to meet WCAG AA standards',
-        }],
+        nodes: [
+          {
+            target: 'button',
+            html: '<button style="color: #999; background: #fff;">Click me</button>',
+            failureSummary: 'Fix the contrast ratio to meet WCAG AA standards',
+          },
+        ],
       },
     ];
 
@@ -185,6 +194,7 @@ export class AccessibilityTester {
    * Check accessibility of DOM element
    */
   async checkElementAccessibility(): Promise<AccessibilityReport> {
+    await Promise.resolve();
     return this.checkAccessibility();
   }
 
@@ -192,12 +202,12 @@ export class AccessibilityTester {
    * Assert no accessibility violations
    */
   assertNoViolations(report: AccessibilityReport, allowedImpacts: string[] = []): void {
-    const violations = report.violations.filter(v => !allowedImpacts.includes(v.impact));
+    const violations = report.violations.filter((v) => !allowedImpacts.includes(v.impact));
 
     if (violations.length > 0) {
-      const message = violations.map(v =>
-        `${v.impact.toUpperCase()}: ${v.description} (${v.id})`
-      ).join('\n');
+      const message = violations
+        .map((v) => `${v.impact.toUpperCase()}: ${v.description} (${v.id})`)
+        .join('\n');
 
       throw new Error(`Accessibility violations found:\n${message}`);
     }
@@ -207,11 +217,11 @@ export class AccessibilityTester {
    * Assert specific accessibility rule passes
    */
   assertRulePasses(report: AccessibilityReport, ruleId: string): void {
-    const violations = report.violations.filter(v => v.id === ruleId);
+    const violations = report.violations.filter((v) => v.id === ruleId);
 
     if (violations.length > 0) {
       const violation = violations[0];
-      const message = violation?.description || 'Unknown violation';
+      const message = violation?.description ?? 'Unknown violation';
       throw new Error(`Accessibility rule "${ruleId}" failed: ${message}`);
     }
   }
@@ -237,7 +247,11 @@ export class ColorContrastTester {
   /**
    * Check if contrast ratio meets WCAG standards
    */
-  static meetsWCAGStandard(ratio: number, level: 'A' | 'AA' | 'AAA' = 'AA', isLargeText = false): boolean {
+  static meetsWCAGStandard(
+    ratio: number,
+    level: 'A' | 'AA' | 'AAA' = 'AA',
+    isLargeText = false
+  ): boolean {
     const thresholds = {
       A: { normal: 3, large: 3 },
       AA: { normal: 4.5, large: 3 },
@@ -262,7 +276,7 @@ export class ColorContrastTester {
     if (!this.meetsWCAGStandard(ratio, level, isLargeText)) {
       throw new Error(
         `Color contrast ratio ${ratio.toFixed(2)} does not meet WCAG ${level} standards ` +
-        `(required: ${this.getRequiredRatio(level, isLargeText)})`
+          `(required: ${this.getRequiredRatio(level, isLargeText)})`
       );
     }
   }
@@ -309,7 +323,7 @@ export class ScreenReaderTester {
   /**
    * Simulate keyboard navigation
    */
-  static getFocusableElements(): any[] {
+  static getFocusableElements(): Element[] {
     // Mock implementation - would require browser DOM in real scenario
     return [];
   }
@@ -326,7 +340,7 @@ export class ScreenReaderTester {
 
     // Check tab order (simplified)
     focusableElements.forEach((element, index) => {
-      const tabindex = (element as any).getAttribute?.('tabindex');
+      const tabindex = element.getAttribute?.('tabindex');
       if (tabindex && parseInt(tabindex) < 0) {
         throw new Error(`Element at index ${index} has negative tabindex`);
       }

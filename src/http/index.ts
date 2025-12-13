@@ -142,27 +142,48 @@ export class HttpMockRegistry {
     return undefined;
   }
 
+  private buildEnrichedHeaders(
+    request: HttpRequest,
+    context: { traceId?: string; spanId?: string; requestId?: string }
+  ): Record<string, string> {
+    return {
+      ...request.headers,
+
+      'x-trace-id': request.traceId ?? context.traceId ?? '',
+
+      'x-span-id': request.spanId ?? context.spanId ?? '',
+
+      'x-request-id': request.requestId ?? context.requestId ?? '',
+    };
+  }
+
+  private buildEnrichedRequest(
+    request: HttpRequest,
+    context: { traceId?: string; spanId?: string; requestId?: string }
+  ): HttpRequest {
+    const baseRequest = {
+      ...request,
+      headers: this.buildEnrichedHeaders(request, context),
+    };
+
+    const traceId = request.traceId ?? context.traceId;
+    const spanId = request.spanId ?? context.spanId;
+    const requestId = request.requestId ?? context.requestId;
+
+    return {
+      ...baseRequest,
+      ...(traceId !== undefined && { traceId }),
+      ...(spanId !== undefined && { spanId }),
+      ...(requestId !== undefined && { requestId }),
+    };
+  }
+
   /**
    * Record a request with context propagation
    */
   recordRequest(request: HttpRequest): void {
     const context = contextManager.getContext();
-    const enrichedRequest: HttpRequest = {
-      ...request,
-      traceId: request.traceId ?? context.traceId,
-      ...(request.spanId !== undefined || context.spanId !== undefined
-        ? { spanId: request.spanId ?? context.spanId }
-        : {}),
-      ...(request.requestId !== undefined || context.requestId !== undefined
-        ? { requestId: request.requestId ?? context.requestId }
-        : {}),
-      headers: {
-        ...request.headers,
-        'x-trace-id': request.traceId ?? context.traceId ?? '',
-        'x-span-id': request.spanId ?? context.spanId ?? '',
-        'x-request-id': request.requestId ?? context.requestId ?? '',
-      },
-    };
+    const enrichedRequest = this.buildEnrichedRequest(request, context);
     this.requests.push(enrichedRequest);
   }
 
@@ -243,6 +264,7 @@ export const ApiMocks = {
     return {
       status,
       statusText: 'OK',
+
       headers: { 'Content-Type': 'application/json' },
       data,
     };
@@ -255,6 +277,7 @@ export const ApiMocks = {
     return {
       status,
       statusText: 'Error',
+
       headers: { 'Content-Type': 'application/json' },
       data: { error: message },
     };
@@ -295,6 +318,7 @@ export const ApiMocks = {
     return {
       status: 422,
       statusText: 'Unprocessable Entity',
+
       headers: { 'Content-Type': 'application/json' },
       data: { errors },
     };
@@ -334,7 +358,10 @@ export class HttpMockBuilder {
   private readonly registry: HttpMockRegistry;
   private method = 'GET';
   private path = '';
-  private responseData: HttpResponse | (() => HttpResponse) = { status: 200, statusText: 'OK' };
+  private responseData: HttpResponse | (() => HttpResponse) = {
+    status: 200,
+    statusText: 'OK',
+  };
   private delay = 0;
 
   constructor(registry?: HttpMockRegistry) {
@@ -520,10 +547,7 @@ export class HttpMockServer {
     if (!this.matchesHeaders(request, matcher)) {
       return false;
     }
-    if (!this.matchesBody(request, matcher)) {
-      return false;
-    }
-    return true;
+    return this.matchesBody(request, matcher);
   }
 
   private matchesMethod(request: HttpRequest, matcher: RequestMatcher): boolean {

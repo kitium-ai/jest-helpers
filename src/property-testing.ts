@@ -35,8 +35,8 @@ export abstract class BaseGenerator<T> implements Generator<T> {
   /**
    * Map generator output
    */
-  map<U>(fn: (value: T) => U): Generator<U> {
-    return new MappedGenerator(this, fn);
+  map<U>(function_: (value: T) => U): Generator<U> {
+    return new MappedGenerator(this, function_);
   }
 
   /**
@@ -49,8 +49,8 @@ export abstract class BaseGenerator<T> implements Generator<T> {
   /**
    * Chain generators
    */
-  flatMap<U>(fn: (value: T) => Generator<U>): Generator<U> {
-    return new FlatMappedGenerator(this, fn);
+  flatMap<U>(function_: (value: T) => Generator<U>): Generator<U> {
+    return new FlatMappedGenerator(this, function_);
   }
 }
 
@@ -58,7 +58,10 @@ export abstract class BaseGenerator<T> implements Generator<T> {
  * Mapped generator
  */
 class MappedGenerator<T, U> extends BaseGenerator<U> {
-  constructor(private source: Generator<T>, private mapper: (value: T) => U) {
+  constructor(
+    private readonly source: Generator<T>,
+    private readonly mapper: (value: T) => U
+  ) {
     super();
   }
 
@@ -81,7 +84,10 @@ class MappedGenerator<T, U> extends BaseGenerator<U> {
  * Filtered generator
  */
 class FilteredGenerator<T> extends BaseGenerator<T> {
-  constructor(private source: Generator<T>, private predicate: (value: T) => boolean) {
+  constructor(
+    private readonly source: Generator<T>,
+    private readonly predicate: (value: T) => boolean
+  ) {
     super();
   }
 
@@ -99,7 +105,7 @@ class FilteredGenerator<T> extends BaseGenerator<T> {
   }
 
   shrink(value: T): T[] {
-    return this.source.shrink(value).filter(this.predicate);
+    return this.source.shrink(value).filter((v) => this.predicate(v));
   }
 
   get description(): string {
@@ -111,7 +117,10 @@ class FilteredGenerator<T> extends BaseGenerator<T> {
  * Flat mapped generator
  */
 class FlatMappedGenerator<T, U> extends BaseGenerator<U> {
-  constructor(private source: Generator<T>, private mapper: (value: T) => Generator<U>) {
+  constructor(
+    private readonly source: Generator<T>,
+    private readonly mapper: (value: T) => Generator<U>
+  ) {
     super();
   }
 
@@ -135,7 +144,10 @@ class FlatMappedGenerator<T, U> extends BaseGenerator<U> {
  * Integer generator
  */
 export class IntegerGenerator extends BaseGenerator<number> {
-  constructor(private min = -1000, private max = 1000) {
+  constructor(
+    private readonly min = -1000,
+    private readonly max = 1000
+  ) {
     super();
   }
 
@@ -144,7 +156,9 @@ export class IntegerGenerator extends BaseGenerator<number> {
   }
 
   shrink(value: number): number[] {
-    if (value === 0) return [];
+    if (value === 0) {
+      return [];
+    }
     const candidates = [0];
     if (Math.abs(value) > 1) {
       candidates.push(value > 0 ? Math.floor(value / 2) : Math.ceil(value / 2));
@@ -161,7 +175,7 @@ export class IntegerGenerator extends BaseGenerator<number> {
  * Positive integer generator
  */
 export class PositiveIntegerGenerator extends IntegerGenerator {
-  private maxValue: number;
+  private readonly maxValue: number;
 
   constructor(max = 1000) {
     super(1, max);
@@ -177,22 +191,28 @@ export class PositiveIntegerGenerator extends IntegerGenerator {
  * String generator
  */
 export class StringGenerator extends BaseGenerator<string> {
-  constructor(private minLength = 0, private maxLength = 100) {
+  constructor(
+    private readonly minLength = 0,
+    private readonly maxLength = 100
+  ) {
     super();
   }
 
   generate(): string {
-    const length = Math.floor(Math.random() * (this.maxLength - this.minLength + 1)) + this.minLength;
+    const length =
+      Math.floor(Math.random() * (this.maxLength - this.minLength + 1)) + this.minLength;
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
-    for (let i = 0; i < length; i++) {
+    for (let index = 0; index < length; index++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
   }
 
   shrink(value: string): string[] {
-    if (value.length === 0) return [];
+    if (value.length === 0) {
+      return [];
+    }
     const candidates = [''];
     if (value.length > 1) {
       candidates.push(value.substring(0, Math.floor(value.length / 2)));
@@ -218,7 +238,9 @@ export class EmailGenerator extends BaseGenerator<string> {
 
   shrink(value: string): string[] {
     const atIndex = value.indexOf('@');
-    if (atIndex === -1) return [];
+    if (atIndex === -1) {
+      return [];
+    }
     return [`a@${value.substring(atIndex + 1)}`];
   }
 
@@ -252,21 +274,28 @@ export class UrlGenerator extends BaseGenerator<string> {
  * Array generator
  */
 export class ArrayGenerator<T> extends BaseGenerator<T[]> {
-  constructor(private elementGenerator: Generator<T>, private minLength = 0, private maxLength = 10) {
+  constructor(
+    private readonly elementGenerator: Generator<T>,
+    private readonly minLength = 0,
+    private readonly maxLength = 10
+  ) {
     super();
   }
 
   generate(): T[] {
-    const length = Math.floor(Math.random() * (this.maxLength - this.minLength + 1)) + this.minLength;
+    const length =
+      Math.floor(Math.random() * (this.maxLength - this.minLength + 1)) + this.minLength;
     const result: T[] = [];
-    for (let i = 0; i < length; i++) {
+    for (let index = 0; index < length; index++) {
       result.push(this.elementGenerator.generate());
     }
     return result;
   }
 
   shrink(value: T[]): T[][] {
-    if (value.length === 0) return [];
+    if (value.length === 0) {
+      return [];
+    }
     return [value.slice(0, Math.floor(value.length / 2))];
   }
 
@@ -279,15 +308,19 @@ export class ArrayGenerator<T> extends BaseGenerator<T[]> {
  * Object generator
  */
 export class ObjectGenerator<T extends Record<string, unknown>> extends BaseGenerator<T> {
-  constructor(private schema: { [K in keyof T]: Generator<T[K]> }) {
+  constructor(private readonly schema: { [K in keyof T]: Generator<T[K]> }) {
     super();
   }
 
   generate(): T {
     const result = {} as T;
-    for (const key in this.schema) {
-      result[key] = this.schema[key].generate();
-    }
+    Object.keys(this.schema).forEach((key) => {
+      const typedKey = key as keyof T;
+      if (Object.prototype.hasOwnProperty.call(this.schema, typedKey)) {
+        const generator = this.schema[typedKey];
+        result[typedKey] = generator.generate();
+      }
+    });
     return result;
   }
 
@@ -297,9 +330,12 @@ export class ObjectGenerator<T extends Record<string, unknown>> extends BaseGene
   }
 
   get description(): string {
-    const fields = Object.keys(this.schema).map(key => {
-      const gen = this.schema[key];
-      return `${key}: ${gen?.description || 'unknown'}`;
+    const fields = Object.keys(this.schema).map((key) => {
+      const typedKey = key as keyof T;
+      const gen = Object.prototype.hasOwnProperty.call(this.schema, typedKey)
+        ? this.schema[typedKey]
+        : undefined;
+      return `${key}: ${gen?.description ?? 'unknown'}`;
     });
     return `object({${fields.join(', ')}})`;
   }
@@ -326,7 +362,7 @@ export class BooleanGenerator extends BaseGenerator<boolean> {
  * One of generator (picks randomly from a list)
  */
 export class OneOfGenerator<T> extends BaseGenerator<T> {
-  constructor(private options: T[]) {
+  constructor(private readonly options: T[]) {
     super();
   }
 
@@ -344,7 +380,7 @@ export class OneOfGenerator<T> extends BaseGenerator<T> {
   }
 
   get description(): string {
-    return `oneOf(${this.options.map(o => JSON.stringify(o)).join(', ')})`;
+    return `oneOf(${this.options.map((o) => JSON.stringify(o)).join(', ')})`;
   }
 }
 
@@ -352,7 +388,7 @@ export class OneOfGenerator<T> extends BaseGenerator<T> {
  * Property-based testing runner
  */
 export class PropertyTester {
-  private seed: number;
+  private readonly seed: number;
 
   constructor(seed?: number) {
     this.seed = seed ?? Date.now();
@@ -375,20 +411,16 @@ export class PropertyTester {
     property: (value: T) => boolean | Promise<boolean>,
     options: PropertyTestOptions = {}
   ): Promise<PropertyResult> {
-    const {
-      iterations = 100,
-      maxShrinkSteps = 10,
-      onFailure,
-    } = options;
+    const { iterations = 100, maxShrinkSteps = 10, onFailure } = options;
 
     const failures: Array<{ input: T; error: Error }> = [];
 
-    for (let i = 0; i < iterations; i++) {
+    for (let index = 0; index < iterations; index++) {
       const input = generator.generate();
 
       try {
-        const result = await property(input);
-        if (!result) {
+        const isSuccessful = await property(input);
+        if (!isSuccessful) {
           const error = new Error(`Property failed for input: ${JSON.stringify(input)}`);
           failures.push({ input, error });
           onFailure?.(input, error);
@@ -398,14 +430,14 @@ export class PropertyTester {
 
           return {
             passed: false,
-            iterations: i + 1,
+            iterations: index + 1,
             failedInputs: failures,
           };
         }
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        failures.push({ input, error: err });
-        onFailure?.(input, err);
+        const error_ = error instanceof Error ? error : new Error(String(error));
+        failures.push({ input, error: error_ });
+        onFailure?.(input, error_);
 
         // Try to shrink the input (async operation, ignore result for now)
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -413,7 +445,7 @@ export class PropertyTester {
 
         return {
           passed: false,
-          iterations: i + 1,
+          iterations: index + 1,
           failedInputs: failures,
         };
       }
@@ -436,27 +468,19 @@ export class PropertyTester {
 
     for (let step = 0; step < maxSteps; step++) {
       const candidates = generator.shrink(currentInput);
-      let foundBetter = false;
+      let improved = false;
 
       for (const candidate of candidates) {
-        try {
-          const result = await property(candidate);
-          if (!result) {
-            const error = new Error(`Property failed for shrunk input: ${JSON.stringify(candidate)}`);
-            currentInput = candidate;
-            currentError = error;
-            foundBetter = true;
-            break;
-          }
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
+        const candidateError = await this.evaluateCandidate(candidate, property);
+        if (candidateError) {
           currentInput = candidate;
-          currentError = err;
-          foundBetter = true;
+          currentError = candidateError;
+          improved = true;
           break;
         }
       }
-      if (!foundBetter) {
+
+      if (!improved) {
         break;
       }
     }
@@ -465,6 +489,21 @@ export class PropertyTester {
       return { input: currentInput, error: currentError };
     }
     return null;
+  }
+
+  private async evaluateCandidate<T>(
+    candidate: T,
+    property: (value: T) => boolean | Promise<boolean>
+  ): Promise<Error | null> {
+    try {
+      const ok = await property(candidate);
+      if (ok) {
+        return null;
+      }
+      return new Error(`Property failed for shrunk input: ${JSON.stringify(candidate)}`);
+    } catch (error) {
+      return error instanceof Error ? error : new Error(String(error));
+    }
   }
 }
 
@@ -480,8 +519,9 @@ export const generators = {
   boolean: () => new BooleanGenerator(),
   array: <T>(elementGen: Generator<T>, minLength = 0, maxLength = 10) =>
     new ArrayGenerator(elementGen, minLength, maxLength),
-  object: <T extends Record<string, unknown>>(schema: { [K in keyof T]: Generator<T[K]> }) =>
-    new ObjectGenerator(schema),
+  object: <T extends Record<string, unknown>>(schema: {
+    [K in keyof T]: Generator<T[K]>;
+  }) => new ObjectGenerator(schema),
   oneOf: <T>(options: T[]) => new OneOfGenerator(options),
 };
 
@@ -506,7 +546,7 @@ export function propertyTest<T>(
 
       throw new Error(
         `Property test failed after ${result.iterations} iterations.\n` +
-        `Original failure: ${failure?.error.message}${shrunkMessage}`
+          `Original failure: ${failure?.error.message}${shrunkMessage}`
       );
     }
   });
